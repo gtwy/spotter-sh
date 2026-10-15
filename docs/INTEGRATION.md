@@ -2,8 +2,40 @@
 
 Everything a host needs to run `spotter-sh` that lives **outside the codebase**: the
 filesystem surfaces it owns on a machine, how `install` creates them and `doctor` checks
-them, and how an agent runtime wires the approval hook and instructs its agent. See
-[SPEC.md](./SPEC.md) for the full design.
+them, and how an agent runtime wires the approval hook and instructs its agent. See [SPEC.md](./SPEC.md) for the full design.
+
+---
+
+## Recommended rollout
+
+**Everyone should start in silent mode.** Silent mode logs what the spotter *would* have
+done and never blocks, delays, or alerts the agent. Commands must not wait on it. After a
+stretch of real use, have the AI review those logs before switching to enforce mode.
+
+### Bot / host steps
+
+1. **Enable silent mode (host-owned).** Set `SPOTTER_SH_MODE=silent` in the agent spawn
+   environment, or set `mode = "silent"` in the root-owned config
+   (`/etc/spotter-sh/config.toml` for a system install). The mode switch is sealed: a shell
+   or config inside the agent session must not be able to flip it. Confirm with
+   `spotter-sh doctor` that shims are on PATH and the log path is writable.
+2. **Run it on real work for a while.** Prefer at least several days of normal agent
+   sessions (longer is better) so the log covers the commands *this* host actually runs —
+   deploys, cleanups, DB clients, git, and everyday file work. Do not switch to enforce on
+   the first quiet afternoon.
+3. **Have the AI review the silent log.** Point it at `spotter-sh report` (or the JSON Lines
+   log under `$SPOTTER_SH_HOME`). Ask it to triage, with your real commands in mind:
+   - **False positives** — would-be catches or hard blocks on commands that were correct and
+     should have passed.
+   - **Misses (false negatives)** — dangerous commands that logged as allow / pass when they
+     should have been caught or blocked.
+   - **Noise and shape issues** — repeated near-threshold passes, redaction gaps, odd cwd or
+     path classifications, and anything that would interrupt this host’s normal workflows.
+4. **Criteria before `enforce`.** Switch only when the review is clean enough for this host:
+   no open misses on commands you care about, false positives understood and either accepted
+   or tuned away (thresholds / `protect_extra` / packs), and the operator agrees the remaining
+   pauses are worth it. Then set `SPOTTER_SH_MODE=enforce` (or `mode = "enforce"` in
+   root-owned config) and re-run `doctor`. Keep reviewing reports after the cutover.
 
 ---
 

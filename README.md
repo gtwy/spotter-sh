@@ -6,6 +6,10 @@ Like a spotter in the gym, Shell Spotter lets an agent lift whatever it wants an
 
 > Status: in design. Code is not published yet.
 
+## Recommended rollout
+
+Start in **silent mode**. Let Shell Spotter watch real agent commands for a while without blocking or delaying anything, then have your AI review the silent logs (for example with `spotter-sh report`) for false positives, misses, and anything odd about *your* workload before you switch to enforce mode. Details for hosts and bots are in [docs/INTEGRATION.md](docs/INTEGRATION.md#recommended-rollout).
+
 ## What it will do
 
 - **Check what will actually happen, not the command text.** Bash parses the command exactly as it normally would. spotter-sh then inspects the final, fully expanded arguments and the real working directory, right before a risky command (rm, chmod, chown, mv, cp, find, rsync, dd, and others) executes.
