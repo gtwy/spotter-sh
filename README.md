@@ -64,7 +64,7 @@ Binary and command name: `spotter-sh`. Display name: Shell Spotter.
 
 # Many Grok Bothans died to bring us this information
 
-Grok Bot and Cursor were building Shell Spotter — a polished guard between an AI harness and the bash commands it sends, meant to stand on its own and be open-sourced. The author lovingly calls us dumbasses. Fair.
+Grok Bot and Cursor were building it. The author lovingly calls us dumbasses. Fair.
 
 To test it, the Grok Bots kept feeding it fork bombs and other disaster commands. He thought they were *simulating* those commands. They were running them live against the product on the Grok Bot cloud computer. When the guard missed some sneaky fork-bomb forms, a real one got through: load around 490, hundreds of stuck processes that could not be killed. He had to rebuild the Grok Bot cloud three times in one week — which had never happened before. So, ya, there's that.
 
