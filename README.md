@@ -37,6 +37,10 @@ Start in **silent mode**. Let Shell Spotter watch real agent commands for a whil
 - **Pluggable.** A documented hook API, a language-neutral JSON interface, and adapters for popular coding-agent hook formats let any bot wire in its own approval flow.
 - **Ships with agent instructions**, a ready-to-paste block that bot authors can give their agents so they understand catches and how to respond.
 
+## Limitations
+
+- **Commands run on a remote server through SSH are not currently checked.** Shell Spotter only sees commands on the machine where it's installed, so anything run on another server over `ssh` (a quoted remote command, an interactive session, or a script piped to a remote shell) goes unchecked. A solution for this is coming later.
+
 ## Planned
 
 - Single static Go binary
