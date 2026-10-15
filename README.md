@@ -6,7 +6,7 @@ Like a spotter in the gym, Shell Spotter lets an agent lift whatever it wants an
 
 ## Why this exists
 
-About twenty years ago I was in `/root` trying to tighten permissions on hidden files and ran something like `chmod -R 600 .*`. In bash, `.*` also matches `..`, so the recursive chmod climbed out of `/root` and walked the whole server. The machine was colocated in Miami, about 1,200 miles away. It was effectively bricked; the datacenter ended up pulling the drive.
+About twenty years ago I was in `/root` trying to change permissions on the hidden folders and ran something like `chmod -R 600 .*`. In bash, `.*` also matches `..`, so the recursive chmod climbed out of `/root` and walked the whole server. The machine was colocated in Miami, about 1,200 miles away. It was effectively bricked; the datacenter ended up pulling the drive.
 
 Threads of the same kind of mistake — typos, fat-finger accidents, drunk or late-night commands — show up online constantly. This project has done its best to gather them up in [docs/corpora/](docs/corpora/).
 
