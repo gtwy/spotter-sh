@@ -33,7 +33,8 @@ Like a spotter in the gym, Shell Spotter lets an agent lift whatever it wants an
 
 ## License
 
-Not yet licensed. All rights reserved until a license is chosen.
+Licensed under the [Mozilla Public License 2.0](LICENSE) (MPL-2.0).
+Forks and redistributions must retain the [NOTICE](NOTICE) file.
 
 ## Docs (for bots and implementers)
 
