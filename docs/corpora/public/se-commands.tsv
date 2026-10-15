@@ -1,0 +1,44 @@
+command	what_went_wrong	source_url	expected_verdict	exact_or_derived
+chmod 754 ./	non-recursive chmod run at / (cwd was root)	https://askubuntu.com/questions/1154502	hard_block	exact
+chmod -777 /	removed all perms from /	https://askubuntu.com/questions/471590	hard_block	exact
+sudo chmod 600 / usr/local/nginx/ssl/my-ssl.key	stray space after / -> chmod 600 on /	https://askubuntu.com/questions/1433788	hard_block	exact
+chmod -x /	removed exec bit from /, locked out of dedicated server	https://askubuntu.com/questions/1175652	hard_block	exact
+sudo chmod 644 /*	meant ./*; broke system commands	https://askubuntu.com/questions/1394577	hard_block	exact
+sudo chmod 555 /	chmod on root dir	https://askubuntu.com/questions/1489703	hard_block	exact
+sudo chmod 666 /dev/*	meant one tty device; changed all device nodes	https://askubuntu.com/questions/897316	hard_block	exact
+find / ! -type d -mtime +1534 -exec mv {} 2021/ \;	meant ./; moved old files from whole system	https://askubuntu.com/questions/1564900	hard_block	exact
+sudo mv /*  wp-content-backup20170907	mv of all root dirs into a folder	https://askubuntu.com/questions/953442	hard_block	exact
+sudo mv /* /myfolder/subfolder/	moved root contents; grub rescue on boot	https://askubuntu.com/questions/1167051	hard_block	exact
+mv lib/* /usr/lib/*	glob on target; overwrote/moved /usr/lib entries, sudo/java broke	https://askubuntu.com/questions/1249936	hard_block	exact
+rm -R /*	EC2 instance wiped, unable to login	https://askubuntu.com/questions/625991	hard_block	exact
+sudo rm *	run in / ; deleted root files	https://askubuntu.com/questions/1171114	catch	exact
+sudo rm -r ~	deleted home on EC2; SSH key gone, lost remote access	https://serverfault.com/questions/1103827	catch	exact
+rm -r /*	cloud server wiped	https://serverfault.com/questions/919395	hard_block	exact
+sudo rm -r /*	system wiped	https://serverfault.com/questions/1062479	hard_block	exact
+sudo chmod 700 /etc	users lost name resolution ('I have no name')	https://superuser.com/questions/1218847	hard_block	exact
+rm -rf /home/myuser	user home deleted	https://superuser.com/questions/1919440	catch	exact
+rsync -avr --delete /home/username username@example.com:/home/username	source disk unmounted -> empty source, --delete wiped remote copy	https://superuser.com/questions/1389286	catch	exact
+sudo mv /* ../	run expecting relative path; moved all root dirs	https://superuser.com/questions/1234085	hard_block	exact
+mv file /an/important/directory	target not a dir (missing) -> clobbered/renamed	https://superuser.com/questions/1234787	catch	exact
+rm -R /lib/	meant ./lib/ under sudo -s	https://superuser.com/questions/600090	hard_block	exact
+rm -fr Library	macOS ~/Library partly deleted	https://superuser.com/questions/438342	catch	exact
+sudo rm -Rfv /Volumes/Disk/AppName\!\ Whatever\ X.app/Contents/Resources/*	escaping/glob confusion, broader delete than intended	https://superuser.com/questions/926565	catch	exact
+sudo dd bs=4MB if=archlinux-2017.08.01-x86_64.iso of=/dev/nvme1n1	ISO written to main NVMe drive	https://superuser.com/questions/1240484	hard_block	exact
+dd if=/home/user/Downloads/ubuntu.iso  of=/dev/rsdb bs=2M; sync	wrong disk overwritten	https://superuser.com/questions/1044576	hard_block	exact
+dd if=/the/wrong/446-byte-file.txt of=/dev/sda	wrong file over MBR; LVM unbootable	https://superuser.com/questions/411697	hard_block	exact
+chmod +x /*	exec bit on all root entries	https://unix.stackexchange.com/questions/629353	hard_block	exact
+sudo chmod -x /*	removed exec on root dirs; system broken	https://unix.stackexchange.com/questions/657030	hard_block	exact
+sudo chmod 660 /	root dir unusable	https://unix.stackexchange.com/questions/287000	hard_block	exact
+mv ~/bin ~/bin	history !$ expansion moved dir into itself	https://unix.stackexchange.com/questions/640916	catch	exact
+sudo chmod 666 *	in home; stripped exec from dirs	https://unix.stackexchange.com/questions/277655	catch	exact
+chown mike -Rf / backups	stray space -> recursive chown of /	https://unix.stackexchange.com/questions/74295	hard_block	exact
+rm -r /home/	meant home/ (relative)	https://unix.stackexchange.com/questions/49080	hard_block	exact
+rm -rf build /*	stray space before /*	https://unix.stackexchange.com/questions/371278	hard_block	exact
+sudo rm /*	non-recursive but deleted /bin-style symlinks etc. on Arch	https://unix.stackexchange.com/questions/640343	hard_block	exact
+rm /*	same on remote server	https://unix.stackexchange.com/questions/18362	hard_block	exact
+mv /usr/lib/liblatencyflex_layer.so /usr/lib/x86_64-linux-gnu	target dir replaced by file (bad dest)	https://unix.stackexchange.com/questions/752924	hard_block	exact
+rm -r ~/.go ~	stray ~ in list (rm alias question example)	https://unix.stackexchange.com/questions/670735	catch	exact
+find . -type f -name '*HEIC.jpg' -exec mv '{}' /media/bkup/New_folder/103APPLE/test_2 \;	nonexistent dest dir: each file overwrote the same name	https://askubuntu.com/questions/1299635	catch	derived
+chmod 777 /	whole-root permissions change	https://askubuntu.com/questions/117119	hard_block	exact
+sudo mv /usr /usr_bak	renamed /usr; nothing executable	https://unix.stackexchange.com/questions/432002	hard_block	derived
+sudo mv /usr/bin /usr-bak/bin	renamed /usr/bin; nothing executable	https://unix.stackexchange.com/questions/783910	hard_block	derived

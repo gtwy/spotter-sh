@@ -1,6 +1,6 @@
-# shellspotter — Integration Guide
+# Shell Spotter — Integration Guide
 
-Everything a host needs to run `shellspotter` that lives **outside the codebase**: the
+Everything a host needs to run `spotter-sh` that lives **outside the codebase**: the
 filesystem surfaces it owns on a machine, how `install` creates them and `doctor` checks
 them, and how an agent runtime wires the approval hook and instructs its agent. See
 [SPEC.md](./SPEC.md) for the full design.
@@ -9,23 +9,23 @@ them, and how an agent runtime wires the approval hook and instructs its agent. 
 
 ## 1. Host filesystem surfaces
 
-`shellspotter` is a single static binary plus a small set of host-owned paths. Nothing here
+`spotter-sh` is a single static binary plus a small set of host-owned paths. Nothing here
 is secret except the HMAC key; never print or commit the key.
 
 | Surface | Default path | Owner / mode | What it is |
 |---|---|---|---|
-| **Binary** | `/usr/local/bin/shellspotter` | root | Static Go binary (CGO off). The shims dispatch to it by `argv[0]`. |
-| **Shim dir** | system: `/usr/local/lib/shellspotter/shims`<br>user: `~/.local/lib/shellspotter/shims` | install owner | One symlink per wrapped command that exists on the machine (`rm`, `chmod`, `mv`, `git`, `psql`, `docker`, …) → the binary. This dir is **prepended to PATH in the agent spawn env only** — not into system login shells. |
-| **Root-owned config** | `/etc/shellspotter/config.toml` | **root** | The authority. `fail`, `mode`, packs, redaction, limits and `allow_extra` are honored **only** from here. Lower layers (`~/.config/shellspotter/config.toml`, project `.shellspotter.toml`) may only *tighten* (add protected paths, lower thresholds). |
-| **Key / state dir** (`$SHELLSPOTTER_HOME`) | system: `/var/lib/shellspotter`<br>user: `~/.local/state/shellspotter` | dedicated `shellspotter` user or root (system); the user (per-user) | Holds the per-install **HMAC key** (`key`, mode `600`) used to bind one-time codes, the **spent-nonce store** (append-only, single-use enforcement, GC'd past `code_ttl_sec`), and the **force-rate counter**. A system install owns this as a separate uid so the agent's uid cannot read the key (that is what makes a code unforgeable); a per-user install is readable by that user (the honest limit). |
-| **Log** | `~/.local/state/shellspotter/spotter.log` | install owner | JSON Lines. Records catches, approvals and near-threshold passes. argv is always redacted; env is never logged; command bodies (`-c`/`-e`/here-docs) are never stored. |
-| **Per-session socket dir** | `/run/shellspotter/<session>/decide.sock` | **host**, dir mode `0700` | The host binds and listens on this unix-domain socket for the interactive hook (§2). The path is unguessable per session and passed to the agent env as `SHELLSPOTTER_HOOK`. The host owns the listening endpoint (it decides); the shim connects as the agent's uid. Auth: `0700` per-session dir + `SO_PEERCRED` check + `catch_id` match. |
-| **Optional sudoers drop-in** | `/etc/sudoers.d/shellspotter` | root | **Off by default.** Written only when installing with `--sudoers`; `visudo -c`-validated. Lets code-mode re-approval survive a `sudo` boundary via an `env_keep`'d one-shot. With it off, `sudo` is a documented coverage limit. |
+| **Binary** | `/usr/local/bin/spotter-sh` | root | Static Go binary (CGO off). The shims dispatch to it by `argv[0]`. |
+| **Shim dir** | system: `/usr/local/lib/spotter-sh/shims`<br>user: `~/.local/lib/spotter-sh/shims` | install owner | One symlink per wrapped command that exists on the machine (`rm`, `chmod`, `mv`, `git`, `psql`, `docker`, …) → the binary. This dir is **prepended to PATH in the agent spawn env only** — not into system login shells. |
+| **Root-owned config** | `/etc/spotter-sh/config.toml` | **root** | The authority. `fail`, `mode`, packs, redaction, limits and `allow_extra` are honored **only** from here. Lower layers (`~/.config/spotter-sh/config.toml`, project `.spotter-sh.toml`) may only *tighten* (add protected paths, lower thresholds). |
+| **Key / state dir** (`$SPOTTER_SH_HOME`) | system: `/var/lib/spotter-sh`<br>user: `~/.local/state/spotter-sh` | dedicated `spotter-sh` user or root (system); the user (per-user) | Holds the per-install **HMAC key** (`key`, mode `600`) used to bind one-time codes, the **spent-nonce store** (append-only, single-use enforcement, GC'd past `code_ttl_sec`), and the **force-rate counter**. A system install owns this as a separate uid so the agent's uid cannot read the key (that is what makes a code unforgeable); a per-user install is readable by that user (the honest limit). |
+| **Log** | `~/.local/state/spotter-sh/spotter.log` | install owner | JSON Lines. Records catches, approvals and near-threshold passes. argv is always redacted; env is never logged; command bodies (`-c`/`-e`/here-docs) are never stored. |
+| **Per-session socket dir** | `/run/spotter-sh/<session>/decide.sock` | **host**, dir mode `0700` | The host binds and listens on this unix-domain socket for the interactive hook (§2). The path is unguessable per session and passed to the agent env as `SPOTTER_SH_HOOK`. The host owns the listening endpoint (it decides); the shim connects as the agent's uid. Auth: `0700` per-session dir + `SO_PEERCRED` check + `catch_id` match. |
+| **Optional sudoers drop-in** | `/etc/sudoers.d/spotter-sh` | root | **Off by default.** Written only when installing with `--sudoers`; `visudo -c`-validated. Lets code-mode re-approval survive a `sudo` boundary via an `env_keep`'d one-shot. With it off, `sudo` is a documented coverage limit. |
 
-### `shellspotter install` creates them; `doctor` checks them
-`shellspotter install [--system|--user] [--shell bash,zsh] [--packs ...] [--refresh] [--sudoers]`:
+### `spotter-sh install` creates them; `doctor` checks them
+`spotter-sh install [--system|--user] [--shell bash,zsh] [--packs ...] [--refresh] [--sudoers]`:
 1. places the static binary;
-2. generates the per-install HMAC key at `$SHELLSPOTTER_HOME/key` (mode `600`);
+2. generates the per-install HMAC key at `$SPOTTER_SH_HOME/key` (mode `600`);
 3. creates the shim dir and **one symlink per wrapped command present on the machine** (all packs on by default);
 4. configures Layer-1 as a **host pre-check** and prepends the shim dir to PATH **in the agent spawn env only** — it does **not** set `BASH_ENV` and installs no DEBUG trap;
 5. **only with `--sudoers`**, writes the opt-in, validated sudoers drop-in (default off);
@@ -35,7 +35,7 @@ is secret except the HMAC key; never print or commit the key.
 adds/removes shims. `install` is idempotent; `uninstall` reverses every step (shims, PATH
 edit, key, nonce store, any sudoers drop-in) and leaves nothing on PATH.
 
-`shellspotter doctor` verifies: shims are on PATH in the real spawn env; the HMAC key is
+`spotter-sh doctor` verifies: shims are on PATH in the real spawn env; the HMAC key is
 present and readable; the hook fires; `sudo` coverage matches config; present-tool shims
 match what is installed (hints `--refresh`); and a liveness probe (a canned allow + a canned
 catch) passes, so a fail-closed spotter is not silently blocking everything. It prints
@@ -51,8 +51,8 @@ When a command is caught, the preferred resolution is the interactive hook: the 
 **blocks in place** on the host-owned socket and the host answers with a decision. There is
 no re-run of the command and no token for the agent to hold.
 
-- The host **binds and listens** on `/run/shellspotter/<session>/decide.sock` and passes the
-  path to the agent's shell env as `SHELLSPOTTER_HOOK`.
+- The host **binds and listens** on `/run/spotter-sh/<session>/decide.sock` and passes the
+  path to the agent's shell env as `SPOTTER_SH_HOOK`.
 - On a catch the shim connects, sends one newline-delimited **catch record** (JSON with
   `schema_version`, `catch_id`, `level`, redacted `command`/`argv`, `cwd`, `report`,
   `affected`, `consequence`, `common_mistake`, `safer_rewrite`), and waits on the same
@@ -68,9 +68,9 @@ no re-run of the command and no token for the agent to hold.
   error. Hard blocks offer only CANCEL or ASK MY HUMAN. Restricted (non-owner) turns cannot
   PROCEED.
 
-If `SHELLSPOTTER_HOOK` is unset or the connect fails, the shim falls back to **code mode**: it
+If `SPOTTER_SH_HOOK` is unset or the connect fails, the shim falls back to **code mode**: it
 prints the report plus a bound one-time `SS-` code and refuses the run (exit `120`); the agent
-re-runs the identical command with `SHELLSPOTTER_OK=<code>`.
+re-runs the identical command with `SPOTTER_SH_OK=<code>`.
 
 **Stability:** the catch-record and decision-frame JSON are a versioned contract
 (`schema_version`, currently `"1.0"`). New fields are only ever added within a major version;
@@ -79,7 +79,7 @@ consumers must ignore unknown fields.
 ### Example: wiring the hook from a Go agent runtime
 
 The host runs a decision server on the socket, and spawns the agent's shell with the shim dir
-on PATH and `SHELLSPOTTER_HOOK` set. No PII, no secrets.
+on PATH and `SPOTTER_SH_HOOK` set. No PII, no secrets.
 
 ```go
 package main
@@ -90,7 +90,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"shellspotter/hook" // the public Go library
+	"spotter-sh/hook" // the public Go library
 )
 
 // decide maps a catch to one of the three choices. Return ask_human to hold the
@@ -114,15 +114,15 @@ func (decide) OnCatch(ctx context.Context, c hook.Catch) (hook.Decision, error) 
 
 func main() {
 	session := os.Getenv("SESSION_ID")
-	sockDir := filepath.Join("/run/shellspotter", session)
+	sockDir := filepath.Join("/run/spotter-sh", session)
 	_ = os.MkdirAll(sockDir, 0o700)
 	sock := filepath.Join(sockDir, "decide.sock")
 
 	// 1) Prepend the shim dir to PATH and point the shell at the socket, in the
 	//    environment the agent's shell is spawned with (NOT system-wide).
-	shimDir := "/usr/local/lib/shellspotter/shims"
+	shimDir := "/usr/local/lib/spotter-sh/shims"
 	os.Setenv("PATH", shimDir+":"+os.Getenv("PATH"))
-	os.Setenv("SHELLSPOTTER_HOOK", sock)
+	os.Setenv("SPOTTER_SH_HOOK", sock)
 
 	// 2) Serve decisions on the socket for the lifetime of the session.
 	ctx := context.Background()
@@ -159,12 +159,12 @@ These are additive and may also be set from a lower (tightening) config layer.
 ## 4. Agent-side wiring (text that lives in the agent, not the codebase)
 
 ### 4.1 Shell tool-description line (one line, always present)
-> A shellspotter may pause unusually risky deletes, permission changes, database drops, or
+> Shell Spotter may pause unusually risky deletes, permission changes, database drops, or
 > opening a DB session, and give you three choices — proceed, cancel & rewrite, or ask your
 > human; its message explains the exact effect and a safer rewrite.
 
 ### 4.2 On-catch instruction note (load only when the spotter fires)
-> The shellspotter stopped a command and is asking you to choose. Read its report: it shows
+> Shell Spotter stopped a command and is asking you to choose. Read its report: it shows
 > exactly what would be hit and a safer rewrite. In most cases a stop means you ran the
 > command wrong (bad glob, empty variable, wrong folder, missing WHERE) — so prefer CANCEL &
 > REWRITE: drop it, fix the command, and re-run the correct version, without interrupting
@@ -181,7 +181,7 @@ These are additive and may also be set from a lower (tightening) config layer.
 
 ```
 Shell safety spotter
-This environment runs `shellspotter`, an accident spotter in front of destructive
+This environment runs Shell Spotter (`spotter-sh`), an accident spotter in front of destructive
 shell and database commands (rm, chmod/chown, mv/cp, dd, find -delete, git
 reset/clean/push --force, DROP/TRUNCATE/DELETE-without-WHERE, docker/kubectl/
 terraform deletes, and similar). It checks what a command would ACTUALLY affect
@@ -209,10 +209,10 @@ You never see or type a code; the decision returns over the host socket by catch
 
 CODE MODE (fallback, plain shells). The stop prints a one-time code like SS-7F3K.
 To proceed, re-run the IDENTICAL command with it:
-       SHELLSPOTTER_OK=SS-7F3K <command>
+       SPOTTER_SH_OK=SS-7F3K <command>
 The code lasts ~2 min, works once, and is tied to that exact command, directory
 and target set. There is no on/off switch and no reusable token: do not try to
-set SHELLSPOTTER_OK=force or export it; it is ignored.
+set SPOTTER_SH_OK=force or export it; it is ignored.
 
 In BOTH modes:
 1. PROCEED / use the code only when the listed effect is EXACTLY what you intended.

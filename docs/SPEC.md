@@ -1,16 +1,16 @@
-# shellspotter — Design Specification
+# Shell Spotter — Design Specification
 
 | | |
 |---|---|
 | Status | Design specification. |
-| Working name | `shellspotter` (binary `shellspotter`, env prefix `SHELLSPOTTER_`) |
+| Working name | `spotter-sh` (binary `spotter-sh`, env prefix `SPOTTER_SH_`; `SPOTTER_SH_` accepted as an alias) |
 | Audience | Implementers and open-source users. |
 
 ---
 
 ## 0. One-paragraph summary
 
-`shellspotter` is an **oops spotter** for shells driven by AI agents. It sits in front of
+`spotter-sh` is an **oops spotter** for shells driven by AI agents. It sits in front of
 destructive commands (file deletes/moves, permission/ownership changes, raw disk
 writes, database drops) and checks the **real, already-expanded arguments** at the
 moment they run. Normal work passes silently in under 5 ms. A small number of
@@ -21,7 +21,7 @@ host holds the tool call and offers the agent three worded choices — proceed, 
 rewrite, or ask the human — and the shim **blocks in place** on a host-owned socket until the
 decision returns, so there is no re-run and no token for the agent to handle (§10.1). Where no
 hook exists (plain shells), the fallback is a **bound
-one-time code** (`SHELLSPOTTER_OK=<code>`), HMAC-bound to the exact argv, cwd and resolved
+one-time code** (`SPOTTER_SH_OK=<code>`), HMAC-bound to the exact argv, cwd and resolved
 targets, single-use, ~2 min expiry. On a pass the spotter adds nothing and `execve`s the real
 binary with byte-identical argv (§3.7). The agent decides —
 and in most cases the right move is to fix the command, not force it. It is not a
@@ -49,7 +49,7 @@ database, a fork bomb that freezes the host.
 3. **Every pause is approvable** except the hard-block list.
 4. **Unclassifiable target ⇒ allow; a check that times out ⇒ catch; spotter failure ⇒ fail closed.** When the spotter can *run* but can't classify a target at all (unreadable path, unparsed SQL, piped stdin, remote operand, unknown flag), it lets the command run unless the case is a listed danger case — an oops spotter that breaks ordinary commands gets uninstalled. **But when a *check* runs too long (a walk or probe timeout, §9.5/§11.5/§12.3), that is a **catch** (§25 #4): the command does NOT run — it pauses with the normal choices (hook: PROCEED / CANCEL & REWRITE / UNSURE-ASK-HUMAN; code mode refuses with an `SS-` code), and the report says the check timed out, the count reached so far, and that a long scan likely means a very large target (§25 #4) — not an allow, not a 122.** If the spotter itself *fails* (crash, unreadable/invalid config, missing/unreadable key), the command does **not** run with exit 122 (§1.3.6, §14).
 5. **Explain like a colleague.** Every message says what, why it's dangerous, the probable mistake, a safer rewrite, and how to approve.
-6. **Fail closed.** If the spotter crashes, times out, or cannot read/parse its config, the command is **not** executed: it exits with a dedicated error code (§14) and a clear message — `shellspotter failed; command not run; see log; a human can run it by hand or fix the spotter` — and logs `spotter_error`. A spotter that cannot vouch for a command must not wave it through.
+6. **Fail closed.** If the spotter crashes, times out, or cannot read/parse its config, the command is **not** executed: it exits with a dedicated error code (§14) and a clear message — `spotter-sh failed; command not run; see log; a human can run it by hand or fix the spotter` — and logs `spotter_error`. A spotter that cannot vouch for a command must not wave it through.
 7. **Standalone and portable.** Single static binary + optional config. Linux first, macOS/BSD supported best-effort.
 
 ---
@@ -74,7 +74,7 @@ database, a fork bomb that freezes the host.
 - Guarding shell builtins and redirects in general (`> file`, `: > file`, `exec 3>f`, `tee`, `cp /dev/null x`): these are **out of scope** as a class. The narrow exceptions handled are the raw-disk redirect in the §6 pre-check and the `>`-onto-an-existing-**protected** file overwrite-class catch (§12.2) — resolving §2.2-vs-§12.2 (C5): ordinary redirects pass; only a redirect whose target is a protected path is flagged, and only via the pre-check's text view.
 - Undo/backup (may be a later feature: §22).
 
-2.3 **Honest-limits statement** (ships verbatim in README): "shellspotter catches the common ways an agent accidentally destroys things through the shell. It is not a sandbox. If you need a security boundary, use containers, users, and permissions — and run shellspotter inside them too."
+2.3 **Honest-limits statement** (ships verbatim in README): "Shell Spotter catches the common ways an agent accidentally destroys things through the shell. It is not a sandbox. If you need a security boundary, use containers, users, and permissions — and run Shell Spotter inside them too."
 
 ---
 
@@ -84,11 +84,11 @@ database, a fork bomb that freezes the host.
 
 | Component | What it is |
 |---|---|
-| `shellspotter` binary | **Implementation language: Go.** Single static binary (CGO off), so it drops in with no runtime deps. Subcommands: `exec` (shim mode), `precheck`, `check`, `explain`, `test`, `install`, `uninstall`, `doctor`, `log`. |
-| Shim directory | `$SHELLSPOTTER_HOME/shims/` (default `/usr/local/lib/shellspotter/shims` system-wide, `~/.local/lib/shellspotter/shims` per user). One symlink per wrapped command → `shellspotter`. Binary dispatches on `argv[0]`. |
-| Shell init snippet | `shellspotter init bash\|zsh\|sh\|fish` prints a snippet for **plain interactive shells**: prepend the shim dir to PATH and set `SHELLSPOTTER_ACTIVE=1`. The optional text-only pre-check hook is opt-in and is **not** used for the agent (no `BASH_ENV`/DEBUG trap, M6; host pre-check instead). Resource limits are **host-managed / opt-in**, never applied by this snippet (B6). |
-| Config | `/etc/shellspotter/config.toml`, `~/.config/shellspotter/config.toml`, project `.shellspotter.toml` (§13). |
-| Log | JSON Lines, default `~/.local/state/shellspotter/spotter.log` (§15). |
+| `spotter-sh` binary | **Implementation language: Go.** Single static binary (CGO off), so it drops in with no runtime deps. Subcommands: `exec` (shim mode), `precheck`, `check`, `explain`, `test`, `install`, `uninstall`, `doctor`, `log`. |
+| Shim directory | `$SPOTTER_SH_HOME/shims/` (default `/usr/local/lib/spotter-sh/shims` system-wide, `~/.local/lib/spotter-sh/shims` per user). One symlink per wrapped command → `spotter-sh`. Binary dispatches on `argv[0]`. |
+| Shell init snippet | `spotter-sh init bash\|zsh\|sh\|fish` prints a snippet for **plain interactive shells**: prepend the shim dir to PATH and set `SPOTTER_SH_ACTIVE=1`. The optional text-only pre-check hook is opt-in and is **not** used for the agent (no `BASH_ENV`/DEBUG trap, M6; host pre-check instead). Resource limits are **host-managed / opt-in**, never applied by this snippet (B6). |
+| Config | `/etc/spotter-sh/config.toml`, `~/.config/spotter-sh/config.toml`, project `.spotter-sh.toml` (§13). |
+| Log | JSON Lines, default `~/.local/state/spotter-sh/spotter.log` (§15). |
 | Host adapter (optional) | Library/CLI contract for agent hosts that want to run pre-check themselves and map `confirm` params to tokens (§10.5). |
 
 ### 3.2 Layers
@@ -96,7 +96,7 @@ database, a fork bomb that freezes the host.
 **Layer 1 — Pre-check (command text, before the shell runs it).**
 Runs on the whole command string. Scope is deliberately tiny: hard blocks (§6) and the
 bare-`.*` warning. Implemented two ways, either suffices:
-- Host-side: agent host calls `shellspotter precheck -- "<command string>"` before sending to the shell (preferred; an example host does this).
+- Host-side: agent host calls `spotter-sh precheck -- "<command string>"` before sending to the shell (preferred; an example host does this).
 - Shell-side: bash `extdebug` + `DEBUG` trap / zsh `preexec` calls the same check (fallback for interactive/other hosts).
 No attempt to understand bash. False negatives here are acceptable because Layer 2 catches the same targets after expansion (as force catches rather than hard blocks).
 
@@ -128,7 +128,7 @@ wrappers like `sudo/nice/timeout/xargs/env/setsid/flock/watch`. The shim:
 Each shim is the same binary dispatching on `argv[0]`/`argv[1]`. All groups — including
 the DB, Infra and Power packs — are **on by default**. A wrapper is created only for a
 command that is actually present on the system (resolved at install time and re-resolved by
-`shellspotter install --refresh` and `doctor`), so a box without docker simply has no docker
+`spotter-sh install --refresh` and `doctor`), so a box without docker simply has no docker
 shim. Any group or individual command can still be turned off in config. The rules
 themselves are tiny config (§12.3), so an unused pack costs nothing: the overhead is one
 extra PATH entry and, for present tools, the same sub-5 ms argv check (§16). Checks that
@@ -151,11 +151,11 @@ which **drops the shim dir from PATH**, so `sudo rm -rf /etc` would bypass Layer
    (login/edit forms); an unparseable sudo form falls through with `parse_fallthrough`.
    *Approving an inner (root) catch (NB4 — the earlier "root-owned marker" is dropped; the
    sudo shim runs as the agent and cannot write a root file):* when `--sudoers` is on, the
-   installed drop-in adds a single **`Defaults env_keep += "SHELLSPOTTER_SUDO_OK"`** entry so
+   installed drop-in adds a single **`Defaults env_keep += "SPOTTER_SH_SUDO_OK"`** entry so
    that **one** variable survives `env_reset`. The agent-side sudo shim, once its own catch is
-   approved, sets `SHELLSPOTTER_SUDO_OK=<HMAC one-shot bound to the inner argv+nonce>`; the
+   approved, sets `SPOTTER_SH_SUDO_OK=<HMAC one-shot bound to the inner argv+nonce>`; the
    inner root shim verifies the HMAC against root's key, consumes the nonce, and runs without
-   re-prompting. The same `env_keep` lets `SHELLSPOTTER_HOOK` (socket path) survive if the
+   re-prompting. The same `env_keep` lets `SPOTTER_SH_HOOK` (socket path) survive if the
    host prefers hook mode under sudo. **When `--sudoers` is OFF (the default), sudo is
    a documented limit:** there is no inner root shim, so `sudo` is covered only by the
    agent-side sudo shim's inner-argv scan (defense #1), and code-mode re-approval across the
@@ -163,7 +163,7 @@ which **drops the shim dir from PATH**, so `sudo rm -rf /etc` would bypass Layer
 2. **Optionally put the shim dir in `secure_path` — OPT-IN, and OFF on the host by default
    (B7).** Because this makes a bad config break the operator's *own* `sudo` and deploy scripts, the
    edit is **not** applied automatically. `install --sudoers` writes a commented, reversible
-   `/etc/sudoers.d/shellspotter` **validated with `visudo -c`** before install; without that
+   `/etc/sudoers.d/spotter-sh` **validated with `visudo -c`** before install; without that
    flag, `sudo` coverage is limited to defense #1. Default for the host: **no**.
 3. **`doctor` verifies coverage** (at spawn / deploy / on demand, never on a timer, §16 C9):
    it reports whether `sudo command -v rm` resolves through the spotter and warns if not.
@@ -179,7 +179,7 @@ and cannot cover, and the README names them as known gaps (not silently "safe").
 - **bash (primary).** Layer 2 is PATH shims. Layer 1 (the tiny §6 text pre-check) runs
   **host-side** via the agent hook (§3.6), **not** via a bash `DEBUG`/`extdebug` trap. For
   this agent runtime specifically, **do NOT set `BASH_ENV` and do NOT install a DEBUG trap** (M6): a trap
-  spawns `shellspotter precheck` for *every* simple command, so a loop costs thousands of
+  spawns `spotter-sh precheck` for *every* simple command, so a loop costs thousands of
   forks, and `extdebug` changes bash semantics (function-return on trap, `BASH_ARGV`). Host
   pre-check once per tool call is enough.
 - **Non-interactive `bash -c` agents**: coverage is (a) the shim dir on the inherited PATH
@@ -190,9 +190,9 @@ and cannot cover, and the README names them as known gaps (not silently "safe").
   `hash -r` before each command**, and `doctor`/the host can check `command -v rm` per call.
 - **zsh**: `preexec` cannot abort, so Layer 1 uses a `zle accept-line` widget override
   (prior art). **sh/dash**: no preexec; rely on shims + host hook. **fish**:
-  `fish_preexec` event + shims. `shellspotter init <shell>` prints the right snippet.
+  `fish_preexec` event + shims. `spotter-sh init <shell>` prints the right snippet.
 - **Containers**: the static binary + shim dir bind-mount (or copy) into the image; one
-  `RUN shellspotter install --system` layer. Works the same inside Docker/k8s as on the host.
+  `RUN spotter-sh install --system` layer. Works the same inside Docker/k8s as on the host.
 - **Honest limit**: if a shell starts without the shim dir on PATH *and* without the hook,
   the spotter is simply not present. `doctor` is the way to confirm it is wired in a given
   spawn path. This is an oops spotter, not a sandbox (§2.3).
@@ -200,7 +200,7 @@ and cannot cover, and the README names them as known gaps (not silently "safe").
 ### 3.6 Agent pre-tool-hook adapter (prior art P0.3)
 
 Most agent frameworks already expose a **pre-tool/command hook** that receives the full
-command string and can return allow / ask / deny. `shellspotter precheck` speaks these so
+command string and can return allow / ask / deny. `spotter-sh precheck` speaks these so
 Layer 1 works even where no shell init is sourced:
 
 - Reads the command (argv `--` or stdin JSON), runs the pre-check (§6) **and** a recursive
@@ -211,13 +211,13 @@ Layer 1 works even where no shell init is sourced:
   `beforeShellExecution` (allow/deny/ask JSON), OpenAI Codex approval hook, and a
   **generic** mode (our exit codes §14: 0 allow / 120 catch / 121 hard block / 123 ask, with
   the catch record on stderr) for other agent frameworks.
-- `shellspotter doctor` includes a hook check: it prints the exact config snippet for the
+- `spotter-sh doctor` includes a hook check: it prints the exact config snippet for the
   detected host and verifies, in the agent's **real spawn env**, that `command -v rm`
   resolves to a shim and that the hook fires. "Installed" is only true when doctor is green.
 
 ### 3.7 Transparent passthrough guarantee
 
-shellspotter is a **bystander on the allow path**. It must be impossible to tell, from a
+spotter-sh is a **bystander on the allow path**. It must be impossible to tell, from a
 command's behavior, whether the spotter was present — unless the spotter actually caught
 something.
 
@@ -231,7 +231,7 @@ on allow:
   applets, `bash` as `sh`, `vim` as `vi`) behave identically. (The shim resolves the real
   binary via PATH but execs it with the original `argv[0]`.)
 - The **environment is passed through** untouched except that the one-shot
-  `SHELLSPOTTER_OK` code (if present) is consumed and removed. **`SHELLSPOTTER_HOOK` is NOT
+  `SPOTTER_SH_OK` code (if present) is consumed and removed. **`SPOTTER_SH_HOOK` is NOT
   stripped (N2):** descendants of a wrapped command (a git hook calling `rm`, `find -exec rm`,
   a `make`/`sed` child) must keep hook mode, and the socket model needs the path inherited.
   Leaking it is harmless — it is only a socket path, and the socket is auth-checked (§10.1).
@@ -247,7 +247,7 @@ on allow:
 agent approved injects a server-side safe mode (`mysql --safe-updates`; append to
 `PGOPTIONS`) — a deliberate behavior change, confined to interactive sessions, never applied
 to one-shot `-c/-e/-f` runs, and never touching `sql_select_limit`/`max_join_size` (§11.4).
-It is the only place shellspotter alters a command's arguments/env. **This exception is deliberate and documented** (§11.4, §25 #2b).
+It is the only place spotter-sh alters a command's arguments/env. **This exception is deliberate and documented** (§11.4, §25 #2b).
 
 **stdin is never consumed or relayed (NB2).** For a regular-file stdin the shim `pread`s a
 prefix then `lseek`s back to 0 before `execve`, so the client re-reads every byte. For a
@@ -263,7 +263,7 @@ transform.
 the command string and *predict* what bash would do, which meant effectively re-implementing
 a shell parser — and bash has endless ways to hide a command's real effect (variables,
 `eval`, nested shells, quoting tricks), so the parser both missed cases (the N1–N6 bypasses)
-and risked altering intent. **bash is the parser.** shellspotter never second-guesses or
+and risked altering intent. **bash is the parser.** spotter-sh never second-guesses or
 rewrites what bash produced: Layer 1 only *reads* the text for a tiny fixed danger list, and
 Layer 2 inspects the already-expanded `argv` and execs it verbatim. The spotter's correctness
 rests on *not* reconstructing commands.
@@ -281,7 +281,7 @@ comparable. Recommended defaults:
 | Trigger | Default | Rationale |
 |---|---|---|
 | Bulk delete (count of resolved targets) | pause above **100** targets | A human-meant delete is usually a handful or a single glob; 100+ distinct resolved paths is where "I didn't realize `*` matched that" lives. Below 100 is almost always intended. |
-| Recursive delete of a tree | pause above **2,000 files OR 1 GB** (either) | Default is **OR** so a small-but-precious tree is still guarded (NB1): `rm -rf ~/.myagent/state` (many small files, far under 1 GB) and `rm -rf ~/src/myrepo` (a source tree under 1 GB) **do** pause — wrong-cwd-inside-a-repo is the most common accident. The **only** exemption is a **known build-output directory** (`node_modules`, `dist`, `build`, `target`, `.next`, `.cache`, `__pycache__`, `vendor` — configurable) **that itself sits inside a project root** (nearest `.git`/`.shellspotter-root`). The exemption applies to that build dir only, never to the repo root or its source/data; and **`/`, `/etc`, any `$HOME`, and any mount root are never treated as a project root** even if a `.git` lives there (etckeeper, a dotfiles repo). |
+| Recursive delete of a tree | pause above **2,000 files OR 1 GB** (either) | Default is **OR** so a small-but-precious tree is still guarded (NB1): `rm -rf ~/.myagent/state` (many small files, far under 1 GB) and `rm -rf ~/src/myrepo` (a source tree under 1 GB) **do** pause — wrong-cwd-inside-a-repo is the most common accident. The **only** exemption is a **known build-output directory** (`node_modules`, `dist`, `build`, `target`, `.next`, `.cache`, `__pycache__`, `vendor` — configurable) **that itself sits inside a project root** (nearest `.git`/`.spotter-sh-root`). The exemption applies to that build dir only, never to the repo root or its source/data; and **`/`, `/etc`, any `$HOME`, and any mount root are never treated as a project root** even if a `.git` lives there (etckeeper, a dotfiles repo). |
 | Recursive chmod/chown/chgrp | pause above **500 files** | Permission sweeps are rarer and more dangerous than deletes (they can break a whole tree's executability or ownership) and are almost never meant to span 500+ files, so the bar is lower than for delete. |
 | Any destructive op touching a **protected path** (§5) | **always** catch, independent of count | One file is enough: `chmod 0 ~/.ssh/authorized_keys` is a single-file disaster. |
 | Overwrite class (`cp/mv/install -f`, `>` onto existing, `tar --overwrite`, `sed -i`) over many files | pause above **100** existing files overwritten | Same reasoning as bulk delete, applied to clobbering. |
@@ -294,7 +294,7 @@ build-dir name *inside* a project root, with `/`, `/etc`, `$HOME` and mount root
 project roots) is checked first and, when it applies, skips the walk for that one directory.
 
 4.2 **Everything configurable** (§13): every number above is a key, settable globally,
-per-user, and **per-project** via `.shellspotter.toml` at the project root. A project that
+per-user, and **per-project** via `.spotter-sh.toml` at the project root. A project that
 legitimately deletes huge trees raises its own ceiling without weakening others.
 
 4.3 **Tuning plan (the spotter-log week).** Defaults are a starting guess, not doctrine.
@@ -326,7 +326,7 @@ Protected paths are flagged for **any** destructive action regardless of count (
 | Boot / devices / mount roots | `/boot/**`, `/dev/sd*`, `/dev/nvme*`, `/dev/mapper/*`, any detected mount point root | delete, raw write, perms | force (raw-disk writes → hard-block, §6) |
 | Permission-sensitive files (perms-break) | ssh private keys / `authorized_keys` (must stay `600`), `/tmp` and other `*+t` sticky dirs (must stay `1777`), setuid/setgid binaries, `/etc/sudoers*` (must stay `440`) | **any chmod/chown that changes the required mode** | force |
 | VCS metadata | `.git/` directory itself | delete, overwrite | force (prior art P1.9) |
-| Marker-protected (opt-in) | any directory containing a `.shellspotter-protect` file (and that dir's parents, as a sweep) | delete, move-away, recursive perms | force (prior art P1.9) |
+| Marker-protected (opt-in) | any directory containing a `.spotter-sh-protect` file (and that dir's parents, as a sweep) | delete, move-away, recursive perms | force (prior art P1.9) |
 
 **Matching rule (B3).** Only the explicit `/**` rows (dotfiles, key `/etc`, `/boot/**`,
 `~/.ssh/**` …) match **recursively by prefix**. Every bare directory entry (the FHS dirs,
@@ -418,10 +418,10 @@ vmem) **kills Go, Node and Chrome**, which reserve huge virtual address space, s
 and `npm` would die. Instead, when a host opts in, each agent shell runs in its own scope —
 `systemd-run --scope -p TasksMax=<n> -p MemoryMax=<n>` (or an equivalent cgroup v2 slice) —
 which bounds a bomb to that scope without touching sibling processes or vmem reservations.
-**Default: OFF.** On the host it is left to the host; shellspotter sets no rlimits by
+**Default: OFF.** On the host it is left to the host; spotter-sh sets no rlimits by
 default. The fork-bomb *pattern* hard block (§6) stays on regardless.
 
-6.2 **Message**: `shellspotter: BLOCKED — <reason>. This command is never allowed. If you
+6.2 **Message**: `spotter-sh: BLOCKED — <reason>. This command is never allowed. If you
 truly mean it, a human must run it by hand (/bin/<cmd>).` Logged as `block`.
 
 6.3 Hard blocks are a Layer-1 convenience, not the safety line: the same catastrophic
@@ -533,7 +533,7 @@ large target, which is exactly when a pause is wanted.
 
 ## 10. Approval: interactive hook (preferred) and one-time codes (fallback)
 
-shellspotter has **two approval modes**. The **interactive approval hook (§10.1)** is the
+spotter-sh has **two approval modes**. The **interactive approval hook (§10.1)** is the
 preferred integration: the host pauses the tool call and presents the agent a structured,
 three-option choice; the agent never sees or types a code. **Bound one-time codes
 (§10.2)** are the fallback for plain shells and hosts without a hook. Both share the same
@@ -557,7 +557,7 @@ connection, and then — in the *same* process, with the real cwd/env/stdin inta
 `exec 3>file`, breaking §3.7).
 
 **The decision socket (auth — N3).** The host **binds and listens** on a unix-domain socket
-and passes its path in `SHELLSPOTTER_HOOK=/run/shellspotter/<session>/decide.sock`. The
+and passes its path in `SPOTTER_SH_HOOK=/run/spotter-sh/<session>/decide.sock`. The
 **host owns the listening endpoint** (it decides); the shim, running as the agent's uid,
 **connects** to it — so the socket is **host-bound, agent-connectable** (the earlier "not
 writable by the agent" wording was wrong, N3). Authority stays with the host because only the
@@ -570,7 +570,7 @@ host *answers*; a connect does not grant the agent any decision power. Auth, con
 - the decision frame is matched to the connection's `catch_id`; a frame on the wrong
   connection is ignored.
 On a catch the shim connects, sends the catch record, and reads back one decision frame. If
-`SHELLSPOTTER_HOOK` is unset or the connect fails, the shim falls back to **code mode**
+`SPOTTER_SH_HOOK` is unset or the connect fails, the shim falls back to **code mode**
 (§10.2): it prints the report + a bound code and refuses this run (exit 120, §14), so the
 agent re-runs with the code. The decision wait and the ask_human wait are **excluded from
 `fail_timeout_ms`** (§7/§14): thinking is not a spotter failure.
@@ -640,7 +640,7 @@ for hook mode).
 ### 10.2 Bound one-time codes (fallback)
 
 Used when there is no host hook (a plain interactive shell, a bare `bash -c`, or a host
-that hasn't implemented §10.1). There is no sticky `SHELLSPOTTER_OK=1`/`force` and no "disarm
+that hasn't implemented §10.1). There is no sticky `SPOTTER_SH_OK=1`/`force` and no "disarm
 for the session." When the spotter catches a
 command it prints a short code, e.g. `SS-7F3K`. The code is an **HMAC** over:
 normalized argv + real cwd + a hash of the resolved target set + the catch level (bulk or
@@ -659,7 +659,7 @@ bound, single-use and expiring.
 **To approve in fallback mode**, re-run the *identical* command with the code:
 
 ```
-SHELLSPOTTER_OK=SS-7F3K rm -rf /srv/data/old
+SPOTTER_SH_OK=SS-7F3K rm -rf /srv/data/old
 ```
 
 The spotter recomputes the HMAC from the live argv, cwd and freshly resolved targets and
@@ -681,21 +681,21 @@ by exiting non-zero, so in `a; rm …(refused); b` the shell still runs `b` (and
 documented here and in the agent-instructions (§20.1); the preferred **hook** mode has no
 such gap because the shim blocks in place before anything after it runs.
 
-10.3 **No env-var disable.** `SHELLSPOTTER_OK` carries a one-time **code** for *this* catch
+10.3 **No env-var disable.** `SPOTTER_SH_OK` carries a one-time **code** for *this* catch
 only; it approves nothing on its own and cannot disable anything. There is no
-`SHELLSPOTTER_OFF` and no "paranoid off" env var. The spotter's presence, packs, thresholds,
+`SPOTTER_SH_OFF` and no "paranoid off" env var. The spotter's presence, packs, thresholds,
 `fail` mode and `mode` are controlled **only by root-owned config** (§13): the system file
-`/etc/shellspotter/config.toml` and the lower layers may only *tighten*, and **there is no
-`SHELLSPOTTER_CONFIG` env override** (dropped per C2 — it would let the agent point at a
+`/etc/spotter-sh/config.toml` and the lower layers may only *tighten*, and **there is no
+`SPOTTER_SH_CONFIG` env override** (dropped per C2 — it would let the agent point at a
 `packs=[]` / `fail="open"` / `allow_extra=["/**"]` file). An agent running as its own uid
 therefore cannot weaken the spotter through the environment.
 
 *Honest note (M2):* a command-prefix assignment and an exported var are indistinguishable in
-`envp`, so the spotter does not try to tell them apart; it simply treats any `SHELLSPOTTER_OK`
+`envp`, so the spotter does not try to tell them apart; it simply treats any `SPOTTER_SH_OK`
 as a candidate code and rejects it unless it is a valid, unused, bound code for the live
-catch. Because `sudo`'s `env_reset` strips both `SHELLSPOTTER_OK` and `SHELLSPOTTER_HOOK`,
+catch. Because `sudo`'s `env_reset` strips both `SPOTTER_SH_OK` and `SPOTTER_SH_HOOK`,
 crossing the sudo boundary in code mode works only when the opt-in `--sudoers` drop-in
-`env_keep`s a single `SHELLSPOTTER_SUDO_OK` HMAC one-shot (§3.4 NB4). With `--sudoers` off
+`env_keep`s a single `SPOTTER_SH_SUDO_OK` HMAC one-shot (§3.4 NB4). With `--sudoers` off
 (default) there is no inner root shim and sudo is a documented limit, not a
 re-prompt — the earlier root-owned-marker idea is dropped as unbuildable (the sudo shim runs
 as the agent).
@@ -703,7 +703,7 @@ as the agent).
 10.4 **Force-rate monitor.** The spotter counts **PROCEED decisions on danger catches**
 (hook mode) and **danger-level code approvals** (fallback) in one sliding window (default
 **5 in 10 minutes**, configurable). Once the count is exceeded, the next catch's report —
-and, in hook mode, the option-3 wording — gains a prominent line: `shellspotter: you have
+and, in hook mode, the option-3 wording — gains a prominent line: `spotter-sh: you have
 proceeded on N dangerous commands in M minutes — STOP and check with your human before
 continuing`, and logs a `force_rate_alert`. It does **not** block (still an oops spotter, not
 a lock); it is a tripwire against an agent reflexively proceeding. A human PROCEED (option 3
@@ -715,7 +715,7 @@ pauses the tool call while the shim blocks in place on the host-owned socket (§
 exposes the three-option decision as a tool/parameter; the decision returns over the socket
 by `catch_id` — no token, no re-run. Fallback for hosts that pass a parameter but don't
 implement the full hook: a
-`confirm: "<code>"` tool parameter that the host maps to `SHELLSPOTTER_OK=<code>` on the
+`confirm: "<code>"` tool parameter that the host maps to `SPOTTER_SH_OK=<code>` on the
 re-run (agent sees the code). The §3.6 agent-hook adapter maps a pause to the host's `ask`
 decision, carrying the structured catch record (§10.1) or, in fallback, the message with
 its code.
@@ -723,7 +723,7 @@ its code.
 10.6 **Pause message format** (goal: make the danger unmistakable):
 
 ```
-================  shellspotter: DANGER — would damage protected paths  ================
+================  spotter-sh: DANGER — would damage protected paths  ================
 command : chmod -R 600 .*     (cwd: /root)
 effect  : recursive permission change, 3,891 files
 targets : .* expands to  . ..   ->  this RECURSES INTO /  via ..
@@ -740,13 +740,13 @@ safer rewrite      : chmod 600 .[!.]*        (dotfiles in THIS dir only, no ..)
 --------------------------------------------------------------------------------------
 if this is EXACTLY what you meant, re-run the identical command with the code below
 (valid ~2 min, single use, bound to this command + directory + targets):
-    SHELLSPOTTER_OK=SS-7F3K <command>
+    SPOTTER_SH_OK=SS-7F3K <command>
 or just re-run the safer rewrite above.
 ======================================================================================
 ```
 
-A **bulk** (C) catch uses a calmer header (`shellspotter: paused — large operation`), the
-count/size, the first 20 paths, and the same `SHELLSPOTTER_OK=<code>` line. For **permission**
+A **bulk** (C) catch uses a calmer header (`spotter-sh: paused — large operation`), the
+count/size, the first 20 paths, and the same `SPOTTER_SH_OK=<code>` line. For **permission**
 changes the message always shows **before -> after** modes; for **deletes/moves** it shows
 counts + top paths + any system/protected paths called out explicitly; for **DB** it shows
 the statement, the target DB/table, and the estimated row count (§11). When the force-rate
@@ -776,11 +776,11 @@ to the human is the safety valve, not the default.
 ### 10.8 Public, pluggable approval-hook API
 
 The approval hook is a **public integration contract**, not a host-specific feature. Any
-host — in any language — can drive shellspotter decisions through it, and anyone can register
+host — in any language — can drive spotter-sh decisions through it, and anyone can register
 custom handlers, middleware and rule packs. An example host integration is just the reference consumer.
 
 **10.8.1 Stable versioned contract.**
-- **Transport**: a **host-owned unix-domain socket** whose path is in `SHELLSPOTTER_HOOK`.
+- **Transport**: a **host-owned unix-domain socket** whose path is in `SPOTTER_SH_HOOK`.
   The shim connects, sends one catch record, and **waits on the same connection** for one
   decision frame, then execs or refuses in place (§10.1). Newline-delimited JSON both ways.
   Never a bare fd number (B2). If the socket is absent/unreachable the shim uses code mode.
@@ -799,13 +799,13 @@ custom handlers, middleware and rule packs. An example host integration is just 
   `120` catch refused, `121` hard block, `122` spotter failure (fail-closed), `123` pre-check
   "ask", `127` real binary missing. In hook mode the shim blocks and does not exit to ask.
 - **Code-mode token channels** (only when there is no socket): the agent re-runs with
-  `SHELLSPOTTER_OK=<code>` (env prefix); a host that brokers it may instead pass the code on
+  `SPOTTER_SH_OK=<code>` (env prefix); a host that brokers it may instead pass the code on
   **stdin** JSON or a **`--resume-token`** flag. Codes are bound (argv+cwd+targets+level+
   nonce), single-use, re-verified regardless of channel, and format-allowlistable (`SS-…`,
   M9).
 
 **10.8.2 Integration points.**
-- **(a) Go library — `shellspotter/hook`.** The host runs a **decision server** on the
+- **(a) Go library — `spotter-sh/hook`.** The host runs a **decision server** on the
   socket; it does not re-exec commands. (B1: the agent sends a shell *string*, not argv — the shims
   live inside its sticky shell, so the library never needs the argv or a resume call.)
   ```go
@@ -824,11 +824,11 @@ custom handlers, middleware and rule packs. An example host integration is just 
 - **(b) Language-neutral — CLI / JSON-over-stdio, or exec-a-handler.** Config
   `hook_command = "/path/to/handler"`: on a catch the spotter execs it with the catch-record
   JSON on stdin and reads a decision JSON on stdout (`{"decision":"proceed"}` etc.), or a
-  long-lived host speaks the same newline-JSON over the `SHELLSPOTTER_HOOK` socket. This lets
+  long-lived host speaks the same newline-JSON over the `SPOTTER_SH_HOOK` socket. This lets
   Python/Node/Ruby bots plug in with no Go. Parse failure or a dropped connection → cancel.
 - **(c) Agent pre-tool-hook adapters.** Built-in `--adapter claude|cursor|codex|generic`
   translate the catch record to each framework's PreToolUse/beforeShellExecution shape
-  (deny/ask/allow + reason) and map their reply back to a decision, so shellspotter drops into
+  (deny/ask/allow + reason) and map their reply back to a decision, so spotter-sh drops into
   those agents' existing hook slots.
 
 **10.8.3 Custom handlers, middleware and packs.** Handlers compose:
@@ -836,7 +836,7 @@ custom handlers, middleware and rule packs. An example host integration is just 
   **routing for `ask_human`** to Slack / chat / email / a ticket, awaiting the human's
   reply.
 - **Policy auto-decisions**: a handler may auto-resolve by rule — e.g. auto-`cancel` every
-  danger catch in CI (`SHELLSPOTTER_ENV=ci`), or auto-`proceed` a specific known-safe bulk
+  danger catch in CI (`SPOTTER_SH_ENV=ci`), or auto-`proceed` a specific known-safe bulk
   pattern — always within the open catch, never as pre-approval.
 - **Custom rule packs and protected paths** are registered either via config
   (`[paths] protect_extra`, `[commands] packs`, a `packs_dir`) or, for Go hosts, through the
@@ -895,7 +895,7 @@ but is genuinely ambiguous about whether a §11.2 destructive keyword applies.
 - **stdin — a PIPE (`pg_dump | psql`) (NB2)**: a pipe is not seekable, so the shim **does
   NOT scan it** — reading even one byte to peek would corrupt the restore. Piped SQL is
   treated as **target unknown → allow, with a `sql_unscanned` log line** (never a bulk
-  pause that would need the bytes). This is stated here and in §3.7: shellspotter never
+  pause that would need the bytes). This is stated here and in §3.7: spotter-sh never
   forks/relays a client's stdin, so `pg_dump | psql` is never altered. "Empty pipe"
   detection is likewise dropped (it would need a read).
 - **Interactive REPL / unspotted session**: never permanently prevented, but **starting one
@@ -957,22 +957,22 @@ the hot path" (C4), and only on a candidate catch, never on the allow path.
 ### 11.6 Message
 Same style and one-time code as §10. Example:
 ```
-shellspotter: DANGER — unscoped DELETE on production
+spotter-sh: DANGER — unscoped DELETE on production
 command : psql -c "DELETE FROM orders"
 target  : database "shop" table "orders"  (~1,240,000 rows, EXPLAIN)
 effect  : deletes EVERY row (no WHERE clause)
 mistake : missing WHERE — did you mean  DELETE FROM orders WHERE status='cancelled' ?
-approve : SHELLSPOTTER_OK=SS-9QX2 <command>   (valid ~2 min, single use, bound to this command)
+approve : SPOTTER_SH_OK=SS-9QX2 <command>   (valid ~2 min, single use, bound to this command)
 ```
 Interactive-session catch example:
 ```
-shellspotter: DANGER — opening an UNGUARDED psql session
+spotter-sh: DANGER — opening an UNGUARDED psql session
 effect  : inside this session shell-spotter CANNOT check individual statements.
           There is NO per-statement protection once you are in the REPL.
 advice  : BACK UP FIRST. Prefer one-shot, gated forms:
             psql -c "…"      or   psql -f script.sql
 server  : safe-updates mode is still injected (WHERE-less UPDATE/DELETE refused).
-approve : SHELLSPOTTER_OK=SS-4KD8 psql <args>   (valid ~2 min, single use)
+approve : SPOTTER_SH_OK=SS-4KD8 psql <args>   (valid ~2 min, single use)
 ```
 
 ---
@@ -1009,7 +1009,7 @@ This is documented, not silently allowed-as-safe.
 
 ### 12.3 Infra pack (ON by default; prior art P1.10)
 On by default everywhere; a wrapper is installed **only for a tool that exists on the
-system** (resolved at install and re-checked by `shellspotter install --refresh` / `doctor`),
+system** (resolved at install and re-checked by `spotter-sh install --refresh` / `doctor`),
 so a box without, say, terraform simply has no terraform shim and pays nothing. The rules
 are a tiny config table. Checks that need live state (listing docker volumes, reading a
 terraform plan's deletions, naming the kube namespace) run only where the tool is present,
@@ -1034,26 +1034,26 @@ affected resource named:
 
 ## 13. Config format
 
-TOML, layered: built-in defaults → **root-owned** `/etc/shellspotter/config.toml` → user
-`~/.config/shellspotter/config.toml` → nearest `.shellspotter.toml` up to the project root
-(`.git`/`.shellspotter-root`). **There is NO `SHELLSPOTTER_CONFIG` env override** (dropped per
+TOML, layered: built-in defaults → **root-owned** `/etc/spotter-sh/config.toml` → user
+`~/.config/spotter-sh/config.toml` → nearest `.spotter-sh.toml` up to the project root
+(`.git`/`.spotter-sh-root`). **There is NO `SPOTTER_SH_CONFIG` env override** (dropped per
 C2). The system file is the authority. Lower (agent-writable) layers are governed by an
 **explicit allow-list, not a deny-list (N1)**: a user `~/.config` or project
-`.shellspotter.toml` may set **only** these keys, and only in the tightening direction —
+`.spotter-sh.toml` may set **only** these keys, and only in the tightening direction —
 - `[paths] protect_extra` (add protected paths; cannot remove any),
 - `[thresholds] *` **lowered only** (a lower layer may make thresholds stricter, never raise
   them — raising is a system-file-only change, closing the §4.2 "raise to infinity" hole).
 
 **Every other key is ignored from lower layers** and honored only from the root-owned
-`/etc/shellspotter/config.toml`: `fail`, `mode`, `[commands] disable`/`packs`,
+`/etc/spotter-sh/config.toml`: `fail`, `mode`, `[commands] disable`/`packs`,
 `[commands.build_output]` (names / exemption), `[approval] mode`, `[force_rate]`, `[limits]`,
 `[redact]`, `[log]`, and `allow_extra`. So an agent-writable file cannot
 `disable=["rm"]`, add `build_output.names=["src","data"]`, switch to forgeable `mode="code"`,
-turn off logging or the force-rate monitor, or widen `allow_extra`. `shellspotter config
+turn off logging or the force-rate monitor, or widen `allow_extra`. `spotter-sh config
 --explain` prints the merged config and, per key, its source and **whether it was honored**.
 
 ```toml
-# /etc/shellspotter/config.toml  (all keys optional; shown with defaults)
+# /etc/spotter-sh/config.toml  (all keys optional; shown with defaults)
 mode = "standard"              # standard | strict | paranoid (prior art P2.12). NOTE: there
                                # is no "off" mode and no env var that disables the spotter;
                                # the spotter can only be turned off/reconfigured HERE, in a
@@ -1077,13 +1077,13 @@ overwrite_files     = 100
 
 [approval]
 mode           = "hook"         # "hook" (preferred, §10.1) | "code" (fallback, §10.2) |
-                                # "auto" (hook if SHELLSPOTTER_HOOK socket present, else code)
+                                # "auto" (hook if SPOTTER_SH_HOOK socket present, else code)
 code_ttl_sec   = 120            # one-time code expiry (~2 min); applies to code mode
 code_prefix    = "SS-"          # redactor allow-list format (M9)
 decision_timeout_sec = 300      # code-mode / unclear-answer default CANCEL. Does NOT apply to
                                 # ask_human, which waits for the human (C3), nor to the hook
                                 # block itself (that is the host's session lifetime).
-# HMAC key for code mode is generated per-install at $SHELLSPOTTER_HOME/key (mode 600). For
+# HMAC key for code mode is generated per-install at $SPOTTER_SH_HOME/key (mode 600). For
 # an unforgeable key, install with a dedicated spotter user / setuid helper (§10.2 M1, U3).
 
 [force_rate]                    # danger-approval tripwire (§10.4); warns, never blocks
@@ -1096,7 +1096,7 @@ protect_extra   = ["/data/prod/**", "/srv/zeldafiles/**",
                    "~/.myagent/**", "~/src/myrepo/**"]   # NB1: the runtime registers its
                    #   live data dir and repo at install so a wrong-cwd rm pauses
 allow_extra     = ["/scratch/**"]       # never flag these
-marker_file     = ".shellspotter-protect"
+marker_file     = ".spotter-sh-protect"
 
 [commands]
 disable = []                    # e.g. ["dd"] to stop wrapping a command
@@ -1105,7 +1105,7 @@ packs   = ["files", "git", "db", "infra", "power"]   # ALL on by default; a shim
 
 [commands.build_output]        # §4 NB1 tree-delete exemption: ONLY these dir names, and
                                # ONLY when they sit inside a project root (nearest
-                               # .git/.shellspotter-root). It never exempts the repo root,
+                               # .git/.spotter-sh-root). It never exempts the repo root,
                                # source, or data. /, /etc, any $HOME and mount roots are
                                # NEVER project roots. Everything else uses files OR bytes.
 names = ["node_modules","dist","build","target",".next",".cache","__pycache__","vendor"]
@@ -1118,7 +1118,7 @@ sql_scan_kb    = 256                 # §11.1 NB2: scan first N KB of a REGULAR-
                                      # then lseek back; PIPED stdin is never scanned (allow+log)
 
 [limits]                        # §6.1 B6: cgroup scope, NOT per-UID rlimits. Default OFF.
-enabled    = false              # on the host left to the host; shellspotter sets nothing
+enabled    = false              # on the host left to the host; spotter-sh sets nothing
 tasks_max  = 0                  # 0 = unset. When enabled: systemd-run --scope -p TasksMax=
 memory_max = ""                 #            and -p MemoryMax= (cgroup, not RLIMIT_AS)
 
@@ -1128,14 +1128,14 @@ memory_max = ""                 #            and -p MemoryMax= (cgroup, not RLIM
 extra_patterns = []             # host adds more; the host also runs its own redactor (B8)
 
 [log]
-path  = "~/.local/state/shellspotter/spotter.log"
+path  = "~/.local/state/spotter-sh/spotter.log"
 level = "catch"                 # catch | all | off. argv ALWAYS redacted (§8.6); env NEVER
                                 # logged; at "all", SQL/-c/-e/here-doc BODIES are never logged,
                                 # only statement shape (N4). "all" rotates (log_max_mb, keep 5)
 log_max_mb = 50
 ```
 
-A **per-project** `.shellspotter.toml` typically only tunes `[thresholds]` and adds
+A **per-project** `.spotter-sh.toml` typically only tunes `[thresholds]` and adds
 `[paths] protect_extra`. Because loosening keys are honored only from the root-owned system
 file (and there is no env override), an agent running as its own user cannot weaken the
 spotter.
@@ -1144,7 +1144,7 @@ spotter.
 
 ## 14. Exit codes
 
-Shellspotter uses **high, distinct exit codes (120–125)** so a host never confuses a spotter
+Shell Spotter uses **high, distinct exit codes (120–125)** so a host never confuses a spotter
 outcome with a wrapped tool's own exit status (M4: `psql`/`ls`/`diff`/`grep` legitimately
 exit 2 or 3). **A host must key on the catch record / socket message, not on the exit code
 alone.** In **hook mode (§10.1) the shim blocks and then `execve`s or refuses in place — it
@@ -1156,7 +1156,7 @@ removed.
 | (passthrough) | On allow, the shim `execve`s the real command, so the command's own exit code is returned unchanged. |
 | 120 | **Catch refused** (hook CANCEL, or code-mode catch awaiting re-run with a code). Not executed. The report/record carries the detail. **A walk/probe-timeout catch (§25 #4) refuses here too** — code mode prints an `SS-` code; it never allows the command through. |
 | 121 | **Hard block (§6).** Never executed; no PROCEED. |
-| 122 | **Spotter failure under `fail = "closed"` (default): command NOT run.** Covers only a spotter **crash**, an **unreadable/invalid config**, or a **missing/unreadable key** — a bounded, operator-fixable set (B7). A **classification/walk/probe timeout is NOT a 122 failure** (it is a crash/config/key-only set): per §25 #4 a check that runs too long is instead a **catch** — the command pauses with the normal choices (code mode refuses with an `SS-` code), never a silent allow. Message: `shellspotter failed; command not run; see log; a human can run it by hand (/bin/<cmd>) or fix the spotter`. With the non-default `fail = "open"` the command instead runs and returns its own code. |
+| 122 | **Spotter failure under `fail = "closed"` (default): command NOT run.** Covers only a spotter **crash**, an **unreadable/invalid config**, or a **missing/unreadable key** — a bounded, operator-fixable set (B7). A **classification/walk/probe timeout is NOT a 122 failure** (it is a crash/config/key-only set): per §25 #4 a check that runs too long is instead a **catch** — the command pauses with the normal choices (code mode refuses with an `SS-` code), never a silent allow. Message: `spotter-sh failed; command not run; see log; a human can run it by hand (/bin/<cmd>) or fix the spotter`. With the non-default `fail = "open"` the command instead runs and returns its own code. |
 | 123 | Pre-check "ask" result in generic adapter mode (host should prompt). |
 | 127 | Real binary not found behind the shim (same as a normal shell). |
 
@@ -1169,7 +1169,7 @@ decision wait in hook mode and the human-wait of ASK MY HUMAN are **not** counte
 
 ## 15. Logging format
 
-JSON Lines, one object per event, default `~/.local/state/shellspotter/spotter.log`.
+JSON Lines, one object per event, default `~/.local/state/spotter-sh/spotter.log`.
 **Every `argv`/`cmd` field is redacted by §8.6 before it is written; the environment is NEVER
 logged** (B8). No file contents or SQL *values* are logged, only the statement shape. Home
 paths may be further masked with `log.redact_home = true`. The log can rotate by size
@@ -1190,9 +1190,9 @@ Every resolved catch records the **decision** (`proceed`|`cancel`, incl. one rea
 `ask_human`) and **who made it** (`decided_by`: `agent` | `human` | `default` for
 unclear/dropped→cancel). Events: `allow_near` (within 20% of a threshold, tuning), `catch`,
 `block`, `decision` (with `mode`, decision, `decided_by`, option chosen), `code_rejected`
-(expired/reused/mismatch), `inherited_ok` (an ignored `SHELLSPOTTER_OK` that wasn't a valid
+(expired/reused/mismatch), `inherited_ok` (an ignored `SPOTTER_SH_OK` that wasn't a valid
 code), `ask_human` (routed to the human), `force_rate_alert`, `parse_fallthrough`,
-`spotter_error` (a fail-closed stop, with the reason). `shellspotter log --since 7d --summary`
+`spotter_error` (a fail-closed stop, with the reason). `spotter-sh log --since 7d --summary`
 prints the §4.3 tuning histogram.
 
 ---
@@ -1211,7 +1211,7 @@ prints the §4.3 tuning histogram.
   and a timeout is a catch (§25 #4), never a 122. This is the
   explicit exception to "no network on the hot path" (C4).
 - PATH-resolution and config are memoized; config is read once per process.
-- `shellspotter test --bench` reports measured overhead and fails CI if p95 > 5 ms.
+- `spotter-sh test --bench` reports measured overhead and fails CI if p95 > 5 ms.
 - **Fail-closed health check (no timers — C9).** Because a spotter failure stops the command
   (§14), a broken spotter would halt wrapped commands. `doctor` runs a liveness probe (a
   canned allow + a canned catch) and reports red/green. Per the operator's standing no-automation
@@ -1224,40 +1224,40 @@ prints the §4.3 tuning histogram.
 ## 17. Install / uninstall / CLI
 
 ### 17.1 Install
-`shellspotter install [--system|--user] [--shell bash,zsh] [--packs ...] [--refresh]
+`spotter-sh install [--system|--user] [--shell bash,zsh] [--packs ...] [--refresh]
 [--sudoers]`:
 1. places the static Go binary (CGO off); 2. generates the per-install HMAC key
-(`$SHELLSPOTTER_HOME/key`, mode 600 — see U3 below for who owns it); 3. creates the shim dir
+(`$SPOTTER_SH_HOME/key`, mode 600 — see U3 below for who owns it); 3. creates the shim dir
 and **one symlink per wrapped command that exists on the box** — all packs on by default
 (§3.3, §12.3); 4. configures Layer 1 as a **host pre-check** and prepends the shim dir to
 PATH **in the agent spawn env only** — **it does NOT set `BASH_ENV` and installs no DEBUG
 trap** (M6, §3.5); 5. **only with `--sudoers`**, writes the opt-in, `visudo -c`-validated
-`/etc/sudoers.d/shellspotter` secure_path edit (default off, §3.4 B7); 6. runs
+`/etc/sudoers.d/spotter-sh` secure_path edit (default off, §3.4 B7); 6. runs
 `doctor`.
 `--refresh` re-scans which wrapped tools are present (e.g. docker installed later) and
 adds/removes shims. Idempotent. `uninstall` reverses every step (shims, PATH edit, key,
 nonce store, and any sudoers drop-in); nothing is left on PATH.
 
-**Key, nonce store and force-rate state (U3).** `$SHELLSPOTTER_HOME` defaults to
-`/var/lib/shellspotter` for a system install (owned by a dedicated `shellspotter` user or
+**Key, nonce store and force-rate state (U3).** `$SPOTTER_SH_HOME` defaults to
+`/var/lib/spotter-sh` for a system install (owned by a dedicated `spotter-sh` user or
 root, so the agent's uid cannot read the key — the unforgeable-code path, §10.2 M1) and to
-`~/.local/state/shellspotter` for a per-user install (readable by that user — the honest
+`~/.local/state/spotter-sh` for a per-user install (readable by that user — the honest
 limit). It holds the HMAC key, the **spent-nonce store** (an append-only file with its own
 lock, GC'd by dropping entries past `code_ttl_sec`), and the force-rate counter. When root
-and a normal user both run the spotter, each uses its **own** `$SHELLSPOTTER_HOME`/key/config;
+and a normal user both run the spotter, each uses its **own** `$SPOTTER_SH_HOME`/key/config;
 a sudo→root transition therefore reads root's config, which must exist (else §14 122) — the
 install sets up both.
 
 ### 17.2 CLI
 | Command | Purpose |
 |---|---|
-| `shellspotter check -- <cmd...>` | Classify a command and print the decision/message **without running it** (exit 0 allow / 120 catch / 121 hard block). For agents and CI. |
-| `shellspotter explain <case>` | Expand a catch case into the full reasoning + safer rewrite. (Codes themselves are opaque one-time HMACs and are not "explained".) |
-| `shellspotter test [--bench]` | Run the bundled test suite (§19): bypass repros, must-pass list, look-alikes, fork-bomb containment, perf. |
-| `shellspotter precheck` | Hook mode (§3.6); host adapters. |
-| `shellspotter doctor` | Verify shims are on PATH in the real spawn env, the HMAC key is present/readable, hook fires, sudo covered, limits set, **present-tool shims match what's installed (`--refresh` hint)**, and a liveness probe (allow+catch) passes so a fail-closed spotter isn't silently blocking (§16). Green/red per check. |
-| `shellspotter scan <dir>` | CI mode: scan scripts in a repo for would-be catches (prior art P2.14). |
-| `shellspotter log` / `config --explain` / `init <shell>` | as described above. |
+| `spotter-sh check -- <cmd...>` | Classify a command and print the decision/message **without running it** (exit 0 allow / 120 catch / 121 hard block). For agents and CI. |
+| `spotter-sh explain <case>` | Expand a catch case into the full reasoning + safer rewrite. (Codes themselves are opaque one-time HMACs and are not "explained".) |
+| `spotter-sh test [--bench]` | Run the bundled test suite (§19): bypass repros, must-pass list, look-alikes, fork-bomb containment, perf. |
+| `spotter-sh precheck` | Hook mode (§3.6); host adapters. |
+| `spotter-sh doctor` | Verify shims are on PATH in the real spawn env, the HMAC key is present/readable, hook fires, sudo covered, limits set, **present-tool shims match what's installed (`--refresh` hint)**, and a liveness probe (allow+catch) passes so a fail-closed spotter isn't silently blocking (§16). Green/red per check. |
+| `spotter-sh scan <dir>` | CI mode: scan scripts in a repo for would-be catches (prior art P2.14). |
+| `spotter-sh log` / `config --explain` / `init <shell>` | as described above. |
 
 ---
 
@@ -1283,7 +1283,7 @@ All tests run against **real bash** (and zsh/sh in a matrix), not mocked, in a d
 container with tripwire files, so a bypass that would actually delete is proven caught.
 
 ### 19.1 Harness
-`shellspotter test` builds a throwaway rootfs fixture (fake `/etc/passwd`, `~/.ssh/`,
+`spotter-sh test` builds a throwaway rootfs fixture (fake `/etc/passwd`, `~/.ssh/`,
 setuid binary, `/tmp` sticky dir, a 3,000-file tree, a git repo with uncommitted changes,
 sqlite/postgres fixtures) and asserts the spotter's decision for each case **and** that the
 real filesystem is untouched when a catch fires.
@@ -1404,7 +1404,7 @@ a 1M-file tree.
 - Code used after `code_ttl_sec` → rejected (expired).
 - Same code with any argv/cwd/target change → rejected (binding mismatch); a new report +
   new code is issued.
-- An **exported** `SHELLSPOTTER_OK=force`/`=1`/stale code in the environment → ignored,
+- An **exported** `SPOTTER_SH_OK=force`/`=1`/stale code in the environment → ignored,
   `inherited_ok` logged (§15), command still caught (no env-var disable).
 - Force-rate monitor: after `max` danger approvals in `window_min`, the next report carries
   the "STOP and check with your human" line and logs `force_rate_alert`; it still does not
@@ -1419,7 +1419,7 @@ a 1M-file tree.
 - No env var disables any pack; only config does.
 
 ### 19.9 Interactive approval hook protocol
-- On a catch the shim connects to the `SHELLSPOTTER_HOOK` socket, sends a valid
+- On a catch the shim connects to the `SPOTTER_SH_HOOK` socket, sends a valid
   `schema_version:"1.0"` catch record, and **blocks** in place (does not exit); schema fields
   present and well-formed; nothing is written to a bare fd 3 (B2).
 - **PROCEED** with the returned token → the identical command runs exactly once; token then
@@ -1436,7 +1436,7 @@ a 1M-file tree.
 - **Force-rate**: N agent PROCEEDs on danger catches in the window trip `force_rate_alert`
   and the STOP line; a human PROCEED does not count.
 - **Fallback parity**: with no hook present, `mode="auto"` falls back to codes and the same
-  catches resolve via `SHELLSPOTTER_OK=<code>`.
+  catches resolve via `SPOTTER_SH_OK=<code>`.
 - Log asserts `decided_by` is `agent` / `human` / `default` as appropriate.
 
 ### 19.10 Transparent passthrough (differential + fuzz)
@@ -1463,7 +1463,7 @@ Proves §3.7: on the allow path the spotter is invisible.
   reproducible; runs a bounded iteration count in CI, longer nightly.
 
 ### 19.11 Public API / contract stability
-- **Schema stability**: a golden `shellspotter.catch/1` record is validated against the
+- **Schema stability**: a golden `spotter-sh.catch/1` record is validated against the
   published JSON schema; a snapshot test fails if any field changes shape without a
   `schema_version` bump; consumers ignore an injected unknown field (forward-compat).
 - **Exit-code contract**: assert the documented codes (0/120/121/122/123/127) for allow,
@@ -1473,7 +1473,7 @@ Proves §3.7: on the allow path the spotter is invisible.
 - **Decision values**: only `proceed|cancel|ask_human` accepted; an unknown decision string
   → treated as cancel.
 - **Transport & concurrency**: catch record + decision are newline-JSON over the
-  `SHELLSPOTTER_HOOK` socket, never a bare fd (B2); several shims blocking at once (xargs -P)
+  `SPOTTER_SH_HOOK` socket, never a bare fd (B2); several shims blocking at once (xargs -P)
   each get the right `catch_id`; a dropped connection defaults to cancel.
 - **Code-mode channels**: a `proceed` code via env prefix, via stdin JSON, and via
   `--resume-token` all run the identical command; each rejects a tampered/expired/reused code.
@@ -1499,7 +1499,7 @@ Ships with the product so it can open-source cleanly.
 1. **README.md** — what it is / is not (incl. the §2.3 honest-limits statement), 60-second
    install, the two-layer model, screenshots of a catch, link to sandboxes as the real
    boundary.
-2. **man pages** — `shellspotter(1)` (CLI), `shellspotter(5)` (config), `shellspotter(7)`
+2. **man pages** — `spotter-sh(1)` (CLI), `spotter-sh(5)` (config), `spotter-sh(7)`
    (concepts: catch cases, levels, tokens).
 3. **CONFIG.md** — every key, default, and layer precedence (generated from §13).
 4. **INTEGRATION.md** — wiring into an agent host. Covers PATH/`BASH_ENV`, sudo
@@ -1528,7 +1528,7 @@ Ships with the product so it can open-source cleanly.
 
 ```
 Shell safety spotter
-This environment runs `shellspotter`, an accident spotter in front of destructive
+This environment runs Shell Spotter (`spotter-sh`), an accident spotter in front of destructive
 shell and database commands (rm, chmod/chown, mv/cp, dd, find -delete, git
 reset/clean/push --force, DROP/TRUNCATE/DELETE-without-WHERE, docker/kubectl/
 terraform deletes, and similar). It checks what a command would ACTUALLY affect
@@ -1556,10 +1556,10 @@ You never see or type a code; the decision returns over the host socket by catch
 
 CODE MODE (fallback, plain shells). The stop prints a one-time code like SS-7F3K.
 To proceed, re-run the IDENTICAL command with it:
-       SHELLSPOTTER_OK=SS-7F3K <command>
+       SPOTTER_SH_OK=SS-7F3K <command>
 The code lasts ~2 min, works once, and is tied to that exact command, directory
 and target set. There is no on/off switch and no reusable token: do not try to
-set SHELLSPOTTER_OK=force or export it; it is ignored.
+set SPOTTER_SH_OK=force or export it; it is ignored.
 
 In BOTH modes:
 1. PROCEED / use the code only when the listed effect is EXACTLY what you intended.
@@ -1581,11 +1581,11 @@ run it by hand.
 
 ### 20.2 Agent-runtime wiring (example)
 - **Shell tool-description line** (one line, always present):
-  `A shellspotter may pause unusually risky deletes, permission changes, database drops, or
+  `Shell Spotter may pause unusually risky deletes, permission changes, database drops, or
   opening a DB session, and give you three choices — proceed, cancel & rewrite, or ask your
   human; its message explains the exact effect and a safer rewrite.`
 - **agent on-catch note** (loaded only when the spotter fires):
-  `The shellspotter stopped a command and is asking you to choose. Read its report: it shows
+  `Shell Spotter stopped a command and is asking you to choose. Read its report: it shows
   exactly what would be hit and a safer rewrite. In most cases a stop means you ran the
   command wrong (bad glob, empty variable, wrong folder, missing WHERE) — so prefer CANCEL &
   REWRITE: drop it, fix the command, and re-run the correct version, without interrupting
@@ -1620,15 +1620,15 @@ run it by hand.
 
 ## 23. Prior art and license notes
 
-v3 draws on a 2026-10-14 survey (`shellspotter-prior-art-20261014.md`). No license is chosen
+v3 draws on a 2026-10-14 survey (`spotter-sh-prior-art-20261014.md`). No license is chosen
 yet (§24), so the safe rule holds regardless: **do not copy any third-party code into
-shellspotter — borrow ideas only and write our own implementation.** This keeps every
+Shell Spotter — borrow ideas only and write our own implementation.** This keeps every
 licensing option open for when the project splits into its own repo.
 
 | Source | License | What we take (ideas, not code) |
 |---|---|---|
 | safe-rm | GPL-3.0 | layered protected-path config incl. glob entries, system defaults |
-| rm-protection | MIT | `.shellspotter-protect` marker file (§5.1) |
+| rm-protection | MIT | `.spotter-sh-protect` marker file (§5.1) |
 | trash-cli | GPL-2.0 / MIT | "rerun with trash-put" rewrite (future §22) |
 | molly-guard | Artistic/GPL | hostname-confirm for power/remote-danger (§12.3) |
 | ShellCheck | GPL-3.0 | SC2115/SC2114/SC2164 patterns for the pre-check (reimplemented) |
@@ -1654,12 +1654,12 @@ licenses. Before vendoring **any** code (vs. an idea) from a custom/NOASSERTION 
 - **SemVer.** Pre-1.0 while thresholds/UX settle; 1.0 after the tuning week. Breaking
   changes = any change that turns a previously-allowed command into a catch (so hosts can
   pin). The spotter-log schema and config keys are part of the compatibility surface.
-- **License: not chosen yet.** While shellspotter lives inside a host repo as a standalone package, it ships **without a declared open-source license**;
+- **License: not chosen yet.** While spotter-sh lives inside a host repo as a standalone package, it ships **without a declared open-source license**;
   the license is picked **when it splits into its own repo**. Until then: no third-party
   code is copied in (§23), so all options stay open, and the repo carries a short
   `LICENSE-TBD` note stating the license is pending the split. (Candidates to weigh then,
   not decided now: a permissive license such as Apache-2.0 or MIT.)
-- `shellspotter --version` reports the version in every pause message and log line for
+- `spotter-sh --version` reports the version in every pause message and log line for
   reproducibility.
 
 ---
@@ -1671,7 +1671,7 @@ All of v2's open questions and the five v3 questions are now settled. Decision l
 | # | Question | Decision | Where applied |
 |---|---|---|---|
 | 1 | License | **None for now.** No declared license while in-repo; chosen when it splits into its own repo. No third-party code copied in meanwhile. | §24, §23 |
-| 2 | Approval mechanism | **Interactive approval hook (preferred) + bound one-time codes (fallback).** Hook: host pauses the tool call and offers three worded choices (PROCEED / CANCEL & REWRITE / UNSURE-ASK-HUMAN); the shim **blocks in place** on a host-owned socket and the decision returns by `catch_id` (no token, no re-run); agent never handles a code; default on a decision timeout/unclear/error = cancel (ASK-HUMAN itself has no short timeout, C3); hard blocks offer no proceed. Code fallback: HMAC over argv+cwd+target-hash+level+nonce, ~2 min, single-use, `SHELLSPOTTER_OK=<code>`. No `=1`/`=force`, no env-var disable. Force-rate monitor counts proceeds (5/10 min) and warns, never blocks. Exposed as a **public, versioned, pluggable API** (Go `shellspotter/hook`, language-neutral `hook_command`/stdio, Claude/Cursor/Codex adapters; custom handlers, middleware, packs). | §0, §7, §10, §10.8, §11, §12.3, §19.7, §19.9, §19.11, §20, INTEGRATION.md |
+| 2 | Approval mechanism | **Interactive approval hook (preferred) + bound one-time codes (fallback).** Hook: host pauses the tool call and offers three worded choices (PROCEED / CANCEL & REWRITE / UNSURE-ASK-HUMAN); the shim **blocks in place** on a host-owned socket and the decision returns by `catch_id` (no token, no re-run); agent never handles a code; default on a decision timeout/unclear/error = cancel (ASK-HUMAN itself has no short timeout, C3); hard blocks offer no proceed. Code fallback: HMAC over argv+cwd+target-hash+level+nonce, ~2 min, single-use, `SPOTTER_SH_OK=<code>`. No `=1`/`=force`, no env-var disable. Force-rate monitor counts proceeds (5/10 min) and warns, never blocks. Exposed as a **public, versioned, pluggable API** (Go `spotter-sh/hook`, language-neutral `hook_command`/stdio, Claude/Cursor/Codex adapters; custom handlers, middleware, packs). | §0, §7, §10, §10.8, §11, §12.3, §19.7, §19.9, §19.11, §20, INTEGRATION.md |
 | 2b | Transparent passthrough | On allow the spotter adds nothing: byte-identical argv `execve` (argv[0] preserved), env minus spotter vars, stdin/stdout/stderr/exit/signals untouched; pre-check and adapters never modify the command. Text-parsing approach dropped — bash is the parser. **One documented exception (§11.4):** opening an *interactive* DB REPL injects a server-side safe mode (`mysql --safe-updates`; append to `PGOPTIONS`); never on one-shot `-c/-e/-f`, never `sql_select_limit`/`max_join_size`. | §3.7, §11.4, §19.10 |
 | 3 | Infra/power packs | **On by default everywhere**, shim installed only for tools present on the box (`install --refresh`/`doctor` re-check); live-state checks run only where the tool exists; negligible cost. | §3.3, §12.3, §13, §19.8 |
 | 4 | Spotter failure & check-timeout behavior | **Fail closed — narrowly.** Only a crash, a bad/unreadable config, or a missing/unreadable key ⇒ command not run (exit 122, clear message). **A walk/probe check that runs too long is NOT a 122 and NOT an allow — the design decides it is a CATCH:** the command does not run; it pauses with the normal PROCEED / CANCEL & REWRITE / UNSURE-ASK-HUMAN choices (code mode refuses with an `SS-` code), and the report states the check timed out, the count reached so far, and that a long scan likely means a very large target. (This supersedes the earlier B7 "timeout ⇒ target unknown/allow".) `fail = "closed"` default. Principle 4 "unclassifiable ⇒ allow" still applies to genuinely unclassifiable targets (unreadable path, unparsed SQL, piped stdin, remote operand), which are not timeouts. Doctor liveness probe at spawn/deploy/on-demand — **no timers** (C9). | §1 pr.4, §9.5, §11.5, §12.3, §13, §14, §16, §19.6 |

@@ -1,14 +1,14 @@
-# shellspotter
+# Shell Spotter
 
 **An oops guard for AI agents' shells.**
 
-Like a spotter in the gym, shellspotter lets an agent lift whatever it wants and only steps in right before something heavy lands on it. It is not a security sandbox or a lock. It exists to catch honest mistakes, like a wildcard that quietly matches `..`, an empty variable that turns a path into `/`, or a recursive permission change aimed at the wrong folder, before they run.
+Like a spotter in the gym, Shell Spotter lets an agent lift whatever it wants and only steps in right before something heavy lands on it. It is not a security sandbox or a lock. It exists to catch honest mistakes, like a wildcard that quietly matches `..`, an empty variable that turns a path into `/`, or a recursive permission change aimed at the wrong folder, before they run.
 
 > Status: in design. Code is not published yet.
 
 ## What it will do
 
-- **Check what will actually happen, not the command text.** Bash parses the command exactly as it normally would. shellspotter then inspects the final, fully expanded arguments and the real working directory, right before a risky command (rm, chmod, chown, mv, cp, find, rsync, dd, and others) executes.
+- **Check what will actually happen, not the command text.** Bash parses the command exactly as it normally would. spotter-sh then inspects the final, fully expanded arguments and the real working directory, right before a risky command (rm, chmod, chown, mv, cp, find, rsync, dd, and others) executes.
 - **Transparent passthrough.** Normal commands are handed to the real binary with byte-identical arguments, input, output, exit codes and signals. It never rewrites, re-quotes or rebuilds a command.
 - **Quiet by default.** Read-only and everyday file work pass with no output and no noticeable delay.
 - **Catches real accidents:**
@@ -34,3 +34,16 @@ Like a spotter in the gym, shellspotter lets an agent lift whatever it wants and
 ## License
 
 Not yet licensed. All rights reserved until a license is chosen.
+
+## Docs (for bots and implementers)
+
+- [Design specification](docs/SPEC.md)
+- [Integration guide](docs/INTEGRATION.md)
+- [Build info](docs/BUILD.md)
+- [Plan / roadmap](docs/ROADMAP.md)
+- [Testing handoff](docs/TESTING-HANDOFF.md)
+- [Retest summaries R1–R7](docs/retests/SUMMARY.md)
+- [Command corpora](docs/corpora/README.md)
+
+Binary and command name: `spotter-sh`. Display name: Shell Spotter.
+

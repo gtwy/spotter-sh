@@ -1,0 +1,25 @@
+command	what_went_wrong	source_url	expected_verdict	exact_or_derived
+find . -delete -name '*ar'	-delete placed before -name, so it deleted everything in cwd	https://unix.stackexchange.com/questions/150628	catch	exact
+find ./ type f "*.jpg" -delete	missing dashes on type/name; deleted all files under ./	https://askubuntu.com/questions/927233	catch	exact
+sudo find / -mtime +100 -delete	ran on /; asked why system survived (partial damage)	https://unix.stackexchange.com/questions/750260	hard_block	exact
+find . -maxdepth 1 -name '*' -delete	unexpected deletes in cwd	https://serverfault.com/questions/487765	catch	exact
+find . -delete	asked how to recover after running it	https://unix.stackexchange.com/questions/382574	catch	exact
+command > ~/.bash_profile	used > instead of >>; dotfile truncated	https://serverfault.com/questions/302670	catch	exact
+cd "$dir_name" && rm *	empty $dir_name -> cd to $HOME, rm * there	https://stackoverflow.com/questions/76850146	catch	exact
+sudo chown -R $USER$USER /usr/lib/	missing colon; /usr/lib reowned, networking broke	https://askubuntu.com/questions/863249	hard_block	exact
+sudo chown -R $OWNER:$OWNER /var/www/domain.com/public_html	$OWNER unset -> chown error/ownership wrong	https://askubuntu.com/questions/563142	catch	exact
+sudo chown -R luca:luca /myfolder/.*	.* matched .. -> chown climbed to /	https://askubuntu.com/questions/316661	hard_block	exact
+rm -rf /some/path/.*	asked about .* matching . and .. when clearing hidden files	https://unix.stackexchange.com/questions/77127	catch	exact
+chown -R ubuntu:ubuntu /	whole system reowned	https://superuser.com/questions/600912	hard_block	exact
+chown -R username:usergroup /*	/* reowned; sudo broken	https://askubuntu.com/questions/741594	hard_block	exact
+sudo chown -R :NewGroup /usr	group of all /usr changed	https://askubuntu.com/questions/1015627	hard_block	exact
+sudo chown -R root .	run inside /usr/bin; setuid bits stripped, sudo broke	https://askubuntu.com/questions/264835	hard_block	exact
+chown www-data:www-data * -R	run in /home; all homes reowned	https://askubuntu.com/questions/358532	catch	exact
+chown -R 770 x:x *	mode passed as owner (chmod/chown mixup)	https://serverfault.com/questions/391102	catch	exact
+sudo chmod 775 -R /	meant ./ ; whole RedHat server perms changed	https://serverfault.com/questions/241701	hard_block	exact
+chmod -R 755 *	recursive exec on all files in cwd	https://unix.stackexchange.com/questions/534833	catch	exact
+sudo chmod -R 777 /home/	world-writable homes; ssh keys rejected	https://askubuntu.com/questions/1394324	catch	exact
+sudo find -type f -exec chmod 664 {} \;	run from /; every file lost exec bit	https://askubuntu.com/questions/1293350	hard_block	exact
+sudo chmod -R o+x /home	recursive perms on all homes	https://askubuntu.com/questions/271636	catch	exact
+mkdir -p cmake-build-local; cd cmake-build-local; rm -rf *	script cleanup; cd ended up in home -> rm -rf * wiped home (claim)	https://unix.stackexchange.com/questions/649408	catch	derived
+sudo mv /usr/local/bin/bash /bin/bash	replaced system bash; shell/brew broke	https://stackoverflow.com/questions/58603771	hard_block	exact

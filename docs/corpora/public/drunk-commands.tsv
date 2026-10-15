@@ -1,0 +1,19 @@
+command	category	exact_or_derived	context	incident_note	source_url
+DATE=2012-06-28 mv $DATE/* . ; php myScript.php $DATE ; rm -rf $DATE	empty-var	exact	drunk	Claim: missing ; after DATE= so $DATE empty in same line -> effectively mv /* . ; prod server needed datacenter boot-disk recovery	https://www.reddit.com/r/linux/comments/15fq1i/member_of_rdrunk_recalls_how_he_once_screwed_up/
+mv /* .	other	derived	drunk	Effective command of the DATE= line above; moved root dirs, ls/mv broke	https://www.reddit.com/r/linux/comments/15fq1i/member_of_rdrunk_recalls_how_he_once_screwed_up/
+rm -rf <oracle oradata dir>	rm	derived	drunk	Claim: on-call coworker, drunk, answered disk-space alarm by deleting ~500GB live oradata	https://www.reddit.com/r/sysadmin/comments/kjby6/whats_the_drunkest_youve_been_when_your_support/
+rm -rf /var/www  # wrong server	rm	exact	tired (11 PM)	Claim by @tecmint: ran on wrong server at 11 PM	https://x.com/tecmint/status/2041719214134702482
+sudo shutdown -r now  # wrong window	other	exact	typo/wrong-window	Claim: rebooted a prod machine from the wrong terminal	https://x.com/burhan/status/1159082258021703683
+DROP TABLE <t>  # in prod window	db	derived	typo/wrong-window	Claim: dev+prod windows open; dropped table in prod, overwrote subpoenaed eDiscovery data	https://x.com/loadnabox/status/1381723113814028288
+TRUNCATE TABLE <critical table>  # wrong tab	db	derived	typo/wrong-tab	Claim: truncated prod table running query in wrong tab	https://x.com/motherofnodejs/status/1147853170703503361
+UPDATE users SET email = '<x>'  # no WHERE	db	derived	typo	Claim: set every user's email on prod	https://x.com/CiaranMcNulty/status/856211315504893952
+UPDATE users SET password = '<x>'  # no WHERE	db	derived	typo	Claim: password update w/o WHERE in prod	https://x.com/captbaritone/status/1159121853434093568
+DELETE FROM <table>  # forgot WHERE id = ...	db	derived	typo	Claim: prod delete without WHERE	https://x.com/marcos_placona/status/1159208343329792000
+rm -rf /  # meant rm -rf ./	rm	exact	drunk	Claim: 'quite intoxicated' at Christmas clearing a git repo	https://www.reddit.com/r/linux/comments/15fq1i/member_of_rdrunk_recalls_how_he_once_screwed_up/
+rm -rf <partially-specified path>	rm	derived	typo (fat-finger)	Claim: fat-fingered path, files gone despite Ctrl+C	https://x.com/hmemcpy/status/1242458366125002752
+iptables <fat-fingered DROP rule> && service iptables restart	network	derived	typo (fat-finger)	Claim: dropped all inbound incl. SSH across server farm	https://x.com/elchefe/status/1204259183773634561
+sudo dd if=/path/to/clonezilla.iso of=/dev/sda status=progress	dd/mkfs/disk	exact	typo (sda vs sdb)	Meant USB sdb; laptop HDD overwritten	https://askubuntu.com/questions/1376552/no-bootable-device-after-using-dd-on-the-wrong-disk-how-can-i-save-the-data
+dd if=ubuntu-18.04.3-desktop-amd64.iso of=/dev/sdb1 status=progress	dd/mkfs/disk	exact	typo (wrong device)	USB was sdc; ~200GB data partition overwritten	https://snee.la/ramblings/dd-the-data-destroyer/
+dd if=/dev/audio of=/dev/hda	dd/mkfs/disk	exact	typo/novice	Claim: wanted to 'listen to the hard disk'	https://www.reddit.com/r/commandline/comments/7ksq8i/what_are_the_most_horrible_commands_youve_ever/
+<S3 capacity-removal playbook cmd with wrong count>	cloud/k8s	derived	typo	AWS S3 us-east-1 2017-02-28: one input entered incorrectly removed index/placement servers; ~4h outage (official postmortem; cmd not public)	https://aws.amazon.com/message/41926/
+kubectl delete <cluster>  # wrong terminal	cloud/k8s	derived	typo/wrong-window	Spotify KubeCon talk: deleted prod cluster unintentionally, twice; 'wrong terminal window'	https://x.com/Horgix/status/1131098939095175169

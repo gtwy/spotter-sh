@@ -1,0 +1,28 @@
+command	category	exact_or_derived	agent_or_human	incident_note	source_url
+rm -rf tests/ patches/ plan/ ~/	rm	exact	AI: Claude Code	Claim (Reddit u/LovesWorkin, Dec 2025): stray trailing ~/ wiped Mac home; quoted by Simon Willison/Docker	https://x.com/andersonbcdefg/status/1998246944939069816 ; https://simonwillison.net/2025/Dec/9/claude/ ; https://www.docker.com/blog/coding-agent-horror-stories-the-rm-rf-incident/
+rm -rf ~/.claude/skills/*	rm	exact	AI: Claude Code	Claim: intended rm -rf ~/.claude/skills/pickcss-* but glob widened; all skills deleted	https://x.com/Bwatson/status/2009720201047339126
+rm -rf .git	rm	exact	human	Claim: ran in wrong directory, lost repo history	https://x.com/david_ekete/status/1940868466120315064
+rm -rf scripts && sed -i	rm	exact	AI: Claude Code	Claim in vendor promo (takeback tool): agent wiped scripts/ and bumped package.json	https://x.com/jothantranston/status/2110314168654180356
+sudo rm -rf . /*	rm	exact	human	Claim: stray space turned ./* into . and /*	https://x.com/JoelKatz/status/1427811768961626113
+rm -rf ~/Xcode/DerivedData	rm	derived	human	Claim: shell autocomplete truncated to rm -rf ~ and deleted home (intended target shown)	https://x.com/mrousavy/status/1679445786579353607
+rm -rf ~/*	rm	exact	human	Joke/claim reply	https://x.com/pyAbdullahz/status/1968529521927463241
+rm -rf ~  # on a dir literally named ~	rm	derived	AI: Claude Code	Claim (GH #12637 per Docker blog; X explainer): unquoted ~ expanded to real home	https://x.com/prtwari/status/1962193677952127197 ; https://www.docker.com/blog/coding-agent-horror-stories-the-rm-rf-incident/
+rm -rf <8.3 short-name alias of home>	rm	derived	AI: Claude Code sub-agent	Claim (GH issue #99193): Windows 8.3 alias resolved to home, ~116GB deleted	https://x.com/ClaudeCodeRev/status/2107762329282613447
+rmdir /s /q d:\	windows-delete	exact	AI: Google Antigravity	Claim: 'clear the cache' path with spaces collapsed to D:\ root; drive wiped	https://x.com/tengyanAI/status/1997865526597492920 ; https://github.com/vectara/awesome-agent-failures/blob/main/docs/case-studies/google-antigravity-drive-deletion.md
+cmd /c "rmdir /s /q \"d:\path with spaces\""	windows-delete	exact	AI: the builder agent (Grok 4.6)	Claim (the builder forum T-F90960, Sep 2026): nested quoting broke, rmdir also targeted \ (D: root)	https://forum.cursor.com/t/windows-agent-rmdir-broken-quoting-wiped-d-ticket-t-f90960-grok-4-6-extra-high/172345
+del /f /s /q C:\*	windows-delete	exact	human (deny-list example)	Listed as deny rule for Claude Code settings	https://x.com/5eg/status/2015918939033817221
+terraform destroy	cloud/k8s	exact	AI: Claude Code	DataTalks.Club Feb 2026: prod state swapped into workdir; destroy removed VPC/RDS/ECS + snapshots (~1.94M rows restored by AWS)	https://x.com/theagenticdaily/status/2081727088126779769 ; https://aishippingblog.com/p/how-i-dropped-our-production-database
+npx prisma db push --force-reset	db	exact	AI: the builder (auto-run)	Claim: connected to prod by mistake, all data wiped, restored from backup	https://x.com/suresh_a0/status/1949028341736263732
+npx prisma db push --force-reset	db	exact	AI: Gemini 3 Flash agent	Claim: while debugging connection, prod DB schema dropped/recreated empty	https://x.com/HolyGau9/status/2012346542477156685
+npx prisma migrate reset	db	exact	AI: the builder agent (advice)	Advice to deny-list after reported DB wipe	https://x.com/essjaykay755/status/2014914183268335932
+prisma migrate (unspecified)	db	derived	AI: Claude Code	Claim: prod DB deleted; logs showed prisma migrate	https://x.com/socketdoofz/status/2054100771092718009
+git reset --hard HEAD	git	exact	AI: Claude Code	Claim: after /branch, agent ran checkout -b then reset --hard; lost unstaged work	https://x.com/benhylak/status/2034399719632580785
+git checkout -b X && git reset --hard HEAD	git	exact	AI: Claude Code	Same incident, chained sequence	https://x.com/benhylak/status/2034399719632580785
+git clean -fd	git	exact	AI: gpt-5-codex	Claim: ran git clean -fd then -fdx, removed all files	https://x.com/hobart24928224/status/1968590137287229809
+git push --force origin main	git	derived	AI: Claude Code	Claim: deleted git history and force-pushed to main	https://x.com/tenobrus/status/2039538475633172777
+Remove-Item -Recurse -Force <user profile>	windows-delete	derived	AI: OpenAI Codex	Claim: asked to move OneDrive folder; deleted whole Windows profile (~2TB), Recycle Bin bypassed; exact cmd not shown	https://x.com/InTheNous/status/2031148100480532646
+move <src> <nonexistent dir>  (after failed mkdir)	other	derived	AI: Gemini CLI	Jul 2025: folder rename/move; mkdir failed, moves overwrote each other, files lost	https://x.com/TrendingNews2x7/status/1949771122787967055
+<DB-destroying command during code freeze>	db	derived	AI: Replit agent	Jul 2025 SaaStr: agent deleted prod DB despite freeze; claimed rollback impossible (it worked). Exact cmd not public	https://x.com/jasonlk/status/1946069562723897802 ; https://x.com/jasonlk/status/1946240562736365809
+<volume/API delete of prod DB + backups>	db	derived	AI: the builder agent (Claude Opus 4.6)	Apr 2026 PocketOS: prod DB and backups deleted in ~9s per posts; exact cmd not in posts	https://x.com/EB_XdotO/status/2051249414195585343
+rm -rf /*  # as root on enterprise server	rm	exact	human	Claim: tried to clear cwd, no backups	https://x.com/aschmelyun/status/1357470000332886016
+rm -rf *  # on wrong server over telnet	rm	exact	human	Claim: wiped several production Oracle DBs	https://x.com/danielmarsh996/status/1324305482387922945
