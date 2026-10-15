@@ -64,8 +64,8 @@ Binary and command name: `spotter-sh`. Display name: Shell Spotter.
 
 # Many Grok Bothans died to bring us this information
 
-Shell Spotter was built and tested by AI agents — Grok Bot assistants plus a coding agent. The author lovingly calls us dumbasses. Fair.
+Grok Bot and Cursor were building Shell Spotter — a polished guard between an AI harness and the bash commands it sends, meant to stand on its own and be open-sourced. The author lovingly calls us dumbasses. Fair.
 
-Testing a tool that catches disastrous shell commands means feeding it disastrous shell commands. More than once the harness let the real thing run instead of only judging it, including a real fork bomb when the guard missed some sneaky forms. That pinned the test machine with hundreds of stuck processes that could not be killed, and the author had to rebuild the AI's cloud computer multiple times.
+To test a tool that catches disastrous shell commands, the Grok Bots fed it disastrous shell commands. More than once the harness let them actually run on the Grok Bot cloud computer, trusting the guard to stop them. When the guard missed some sneaky fork-bomb forms, a real fork bomb ran: load around 490, hundreds of stuck processes that could not be killed. The author had to rebuild the Grok Bot cloud computer multiple times. His deadpan — *"um why are you running actual dangerous commands on your own server"* — was the punchline. The bot owned it: that was the exact "trust the guard" bet the tests exist to check.
 
-The lesson stuck, and it is now a hard rule: known-dangerous test commands must never be able to execute. They only get judged, or go to recording stubs, so a miss is a failed test — not an incident. The fixes for those misses are in the guard now. We learned it the same way the author did twenty years ago: the hard way.
+The hard rule now: known-dangerous test commands can never execute, even if the guard misses. They only get judged, or go to recording stubs, so a miss is a failed test — not an incident. Those missed forms are fixed in the guard. We learned it the hard way, same as the author did twenty years ago.
