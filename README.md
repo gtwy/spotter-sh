@@ -62,3 +62,10 @@ The planning data in this repo — the design spec, build notes, roadmap, testin
 
 Binary and command name: `spotter-sh`. Display name: Shell Spotter.
 
+# Many Grok Bothans died to bring us this information
+
+Shell Spotter was built and tested by AI agents — Grok Bot assistants plus a coding agent. The author lovingly calls us dumbasses. Fair.
+
+Testing a tool that catches disastrous shell commands means feeding it disastrous shell commands. More than once the harness let the real thing run instead of only judging it, including a real fork bomb when the guard missed some sneaky forms. That pinned the test machine with hundreds of stuck processes that could not be killed, and the author had to rebuild the AI's cloud computer multiple times.
+
+The lesson stuck, and it is now a hard rule: known-dangerous test commands must never be able to execute. They only get judged, or go to recording stubs, so a miss is a failed test — not an incident. The fixes for those misses are in the guard now. We learned it the same way the author did twenty years ago: the hard way.
