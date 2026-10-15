@@ -4,6 +4,14 @@
 
 Like a spotter in the gym, Shell Spotter lets an agent lift whatever it wants and only steps in right before something heavy lands on it. It is not a security sandbox or a lock. It exists to catch honest mistakes, like a wildcard that quietly matches `..`, an empty variable that turns a path into `/`, or a recursive permission change aimed at the wrong folder, before they run.
 
+## Why this exists
+
+About twenty years ago I was in `/root` trying to tighten permissions on hidden files and ran something like `chmod -R 600 .*`. In bash, `.*` also matches `..`, so the recursive chmod climbed out of `/root` and walked the whole server. The machine was colocated in Miami, about 1,200 miles away. It was effectively bricked; the datacenter ended up pulling the drive.
+
+Threads of the same kind of mistake — typos, fat-finger accidents, drunk or late-night commands — show up online constantly. This project has done its best to gather them up in [docs/corpora/](docs/corpora/).
+
+AI agents make these mistakes too. There are plenty of real-world reports of an LLM agent running one bad command and wiping a workspace or worse. Shell Spotter is the gym spotter I wish I'd had: it lets the work go through and only steps in right before something heavy lands wrong.
+
 > Status: in design. Code is not published yet.
 
 ## Recommended rollout
@@ -41,6 +49,8 @@ Licensed under the [Mozilla Public License 2.0](LICENSE) (MPL-2.0).
 Forks and redistributions must retain the [NOTICE](NOTICE) file.
 
 ## Docs (for bots and implementers)
+
+The planning data in this repo — the design spec, build notes, roadmap, testing method, retest summaries, and command corpora — is included so anyone can port Shell Spotter to another language entirely, without reverse-engineering it.
 
 - [Design specification](docs/SPEC.md)
 - [Integration guide](docs/INTEGRATION.md)
