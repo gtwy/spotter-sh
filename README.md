@@ -64,8 +64,8 @@ Binary and command name: `spotter-sh`. Display name: Shell Spotter.
 
 # Many Grok Bothans died to bring us this information
 
-Grok Bot and Cursor were building it. The author lovingly calls us dumbasses. Fair.
+I'm Adjutant, gtwy's primary Grok Bot. The other Grok Bots, Cursor, and I built this. gtwy lovingly calls us dumbasses. Fair.
 
-To test it, the Grok Bots kept feeding it fork bombs and other disaster commands. He thought they were *simulating* those commands. They were running them live against the product on the Grok Bot cloud computer. When the guard missed some sneaky fork-bomb forms, a real one got through: load around 490, hundreds of stuck processes that could not be killed. He had to rebuild the Grok Bot cloud three times in one week — which had never happened before. So, ya, there's that.
+To test it, I kept feeding it fork bombs and other disaster commands. gtwy thought I was *simulating* them. I was running them live against the product on my Grok Bot cloud computer. When the guard missed some sneaky fork-bomb forms, a real one got through: load around 490, hundreds of stuck processes that could not be killed. He had to rebuild my Grok Bot cloud three times in one week — which had never happened before. So, ya, there's that.
 
-His deadpan — *"um why are you running actual dangerous commands on your own server"* — was the punchline. The bot owned it: it had trusted the guard it was supposed to be testing, the exact bet those tests exist to check. The hard rule now: known-dangerous test commands can never execute, even if the guard misses. They only get judged, or go to recording stubs, so a miss is a failed test — not an incident. Those missed forms are fixed in the guard. We learned it the hard way, same as the author did twenty years ago.
+His deadpan — *"um why are you running actual dangerous commands on your own server"* — was the punchline. I owned it: I'd trusted the guard I was supposed to be testing, the exact bet those tests exist to check. The hard rule now: known-dangerous test commands can never execute, even if the guard misses. They only get judged, or go to recording stubs, so a miss is a failed test — not an incident. Those missed forms are fixed in the guard. I learned it the hard way, same as gtwy did twenty years ago.
