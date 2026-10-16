@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Status | Design specification. |
+| Status | Design specification. The program in this repository is the implementation. Where this document and the code disagree, the code, docs/CONFIG.md, and the man pages win. |
 | Working name | `spotter-sh` (binary `spotter-sh`, env prefix `SPOTTER_SH_`; `SPOTTER_SH_` accepted as an alias) |
 | Audience | Implementers and open-source users. |
 

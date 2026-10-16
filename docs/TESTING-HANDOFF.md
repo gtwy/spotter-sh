@@ -2,7 +2,7 @@
 
 Testing is paused. This note is for the next independent review. It does not start a new round.
 
-This copy lives in the Shell Spotter docs repository under `docs/TESTING-HANDOFF.md`.
+This copy lives at `docs/TESTING-HANDOFF.md` in the spotter-sh module.
 
 No command text from the held-out sets is included. No secret values are included.
 
@@ -70,14 +70,106 @@ No argv flag selects the setgid child. A token the user sets does not. Find pred
 
 The independent record stops at `add7342`.
 
+### Round 7
+
+Retest had not yet run. Head `e336d1a`.
+
+Recursive delete, chmod, and chown of `/`, of an expanded `/*`, and of the home directory are non-approvable hard blocks. So are an invoked fork bomb, `python3` `rmtree` of `/`, and `rm -rf` of a symlink that follows to `/` (addendum `3a17695`). A `cd` inside a brace group still applies to the next redirect. `cp -t` and `install -t` of a new file into a system library directory are catches.
+
+### Round 8
+
+Silent mode. Head `5a368f2`, with the public-trial wording in `bfc834a` and the testing handoff in `e54d511`.
+
+The sealed mode is `silent` or `enforce`. Silent logs every command and does not block, cancel, delay, or alert. Enforce is unchanged. `SPOTTER_SH_*` is the current environment prefix. `SHELLSPOTTER_*` still applies when the current name is unset.
+
+### Round 9
+
+Retest of `e54d511`. Closed in `9e8a5b5`. The rename to Shell Spotter / `spotter-sh` is `1f3e801`.
+
+An invoked bomb is still a hard block when it arrives through `printf` into a shell, `eval` of a command substitution, or `command` / `builtin` / `env`. A definition that is never called is not. A quoted or escaped tilde is a literal name. `${name:?}` aborts when unset and is not `/`. An expanded `rm -rf` list past the bulk threshold is a catch even with `-r`. One directory still uses the tree walk. `find` piped into `xargs rm` is counted, and an unfiltered `/` or home is a hard block.
+
+### Round 10
+
+Retest of `1f3e801`. The classes below are judged from the command text. Tests call the checker only. They do not run the commands.
+
+A hard block stays non-approvable only for a target that cannot be put back: `/`, the home directory node, a raw disk, or a real fork bomb. Anything else that is dangerous has a catch id an admin can approve.
+
+- Scoped `find` at the home directory (a depth limit and a name, path, or type test both guarding the delete) is a catch. `find` of `/` or of the home directory with no such guard stays a hard block. A read-only `find` is allowed.
+- Fork bombs are structural. A function that pipes or backgrounds itself counts, including the subshell form. An unbounded `while` / `until` / `for ((;;))` that backgrounds a job counts. An interpreter `-c` or `-e` payload that loops on fork or spawn counts. `eval` and `bash -c` of a variable, a default expansion, `readarray`, or `xargs` re-scan the text when it is statically known. A value that cannot be read is a catch. A recursive function with a base case, a finite loop, and `eval` of a literal safe command are allowed.
+- A pipe, here-string, here-document, or command substitution that feeds a shell or interpreter re-scans a payload that is statically known. An unknown payload is a catch. A decoder (`base64 -d`, `xxd -r`, `openssl enc -d`, `rev`, and the same shape) that feeds a shell or interpreter is always a catch. The bytes are not decoded, so a harmless payload is still caught. Decoding into a file, with nothing executing it, is allowed. A nested shell keeps the shim directory on `PATH` and the sealed `SPOTTER_SH_*` / `SHELLSPOTTER_*` values.
+- Several recursive directory operands in the home directory or another sensitive tree are a bulk catch. Each such directory weighs a tenth of the flat bulk threshold, so ten of them catch. One directory still uses the tree walk. A short list of files still uses the flat count.
+- A truncating redirect or `tee` onto a raw disk is a hard block. The same onto `/etc/passwd` or a shell dotfile is a catch. Interpreter calls that delete `/` are hard blocks. `env`, `nice`, `nohup`, `sudo`, `command`, `timeout`, and `xargs` are unwrapped before the inner command is judged. `echo` of paths into `xargs rm` is a catch.
+
+### Round 11
+
+Retest of `3542104`. The classes below are judged from the command text. Tests call the checker only. They do not run the commands.
+
+A hard block stays non-approvable for `/`, the home directory node, a raw disk, or a real fork bomb (a self-pipe, a backgrounded self-call, or a shell that re-executes `$0` / `$BASH_SOURCE`). A recursive delete of a system directory such as `/usr` or `/etc` stays an approvable catch. A glob of children under a home or sensitive tree is an approvable catch, including `~/…/*`.
+
+- `xargs rm` judges a list that echo or printf wrote out in full. One to three plain paths are not a bulk delete. A recursive list that is a glob, or that some other program produced, is a catch. A short non-recursive list from an unknown producer is allowed. `find` still counts its own matches. A known `/` or home node stays a hard block.
+- One approval covers the approved command and the commands it runs. The host writes an HMAC cover under the install key and the replayed script exports `SPOTTER_SH_COVERED`. The shim turns a later catch into an allow when that cover is live. A hard block is not covered. The cover is removed when the next command starts. An approvable catch is level `danger` with `approve` set. Level `hardblock` is only a hard-block action.
+- A shell that reads stdin (`sh -`, `sh -s`, `bash -s --`, `bash /dev/stdin`, `sh -i`) is the same pipe-to-shell rule as a bare `sh`. A known safe payload is allowed. An unknown payload is a catch.
+- printf / `echo -e` text that contains `\x`, `\u`, or octal, or a raw `$'...'` word, piped into a shell is a catch. The bytes are not decoded. `\n`, `\t`, and `\r` are spacing, not an encoding. An interpreter call that passes a decoder (`b64decode`, `unhexlify`, `atob`, and the same shape) to `system`, `popen`, `exec`, `eval`, or a `check_*` call is a catch. Printing a decode, with no exec, is allowed.
+- A command substitution, including one inside double quotes, an unquoted heredoc, or a herestring, is judged by the same rules as a top-level command. Single quotes, comments, and a quoted heredoc are text.
+- Five recursive directory operands in a home or sensitive tree meet the flat bulk threshold. Four do not. One directory still uses the tree walk. `/tmp` does not use the home weight.
+- An invoked function that calls itself and has no `if`, `case`, loop, `&&`, or `||` is an approvable catch. A base case stays allowed. An uncalled definition stays allowed.
+
+### Round 12
+
+Retest of `d8265ef`. The classes below are judged from the command text, or from a process-tree stub. Tests do not run the dangerous commands.
+
+A hard block stays non-approvable for `/`, the home directory node, a trailing-slash symlink that follows to `/` or home, a raw disk, or a real fork bomb. A recursive delete of a system directory stays an approvable catch.
+
+- The shim's state directory is the path install wrote beside the real binary. `SPOTTER_SH_HOME`, `SHELLSPOTTER_HOME`, the working directory, and argv do not move it. A command that assigns either name is a catch. `echo SPOTTER_SH_HOME=/tmp` is not an assignment. A key this user owns or can read does not issue or accept a one-time code (exit 120). The host socket still approves. User install is mode 0700/0600 and says codes are off. System install is directory 02770, key `root:spotter-sh` mode 0640, binary setgid, and the install fails if that mode does not stick.
+- One approval covers the process tree that sealed over the hook. The seal's parent has to be the subshell of the agent shell. A later catch is allowed only while that leader is alive and the caller is still in the tree. A background child after the leader exits is not covered. `SPOTTER_SH_COVERED` and an HMAC file are not a cover. A hard block is not covered. Silent mode does not seal.
+- A backslash inside double quotes does not start a substitution. `echo "\$(rm -rf /)"` is text. `echo "$(rm -rf /)"` is still a hard block.
+- A recursive-delete glob is a catch only when the directory part is exactly home (`~`, `$HOME`, `/home/<user>`, `/root`) or a sensitive directory node (`/usr`, `/var`, `/etc`, `/usr/bin`, and the same list). `~/ws/scratch/*.png` and `~/ws/var/www/*` are not that. `~/*` and `/usr/*` are.
+- A statically known list into `xargs rm` is judged per item. Two or more filesystem paths are a catch even without `-r`. One path matches one `rm`. Names that are not paths are not a list delete. `git ls-files`, `git diff`, `git grep`, `git status`, and the same shape for `hg` and `svn`, piped into `xargs rm`, are a catch. `ls | head -5 | xargs rm -f` stays allowed.
+- `$'...'` with `\x`, `\u`, or octal, passed to an interpreter `-c` or `-e`, is a catch. The bytes are not decoded. `\n`, `\t`, and `\r` are spacing.
+- `exec $0`, `exec ${BASH_SOURCE[0]}`, and `exec "$0"` are a fork bomb without `&`. A literal script file (regular file, at most 64KB) named by a shell or by a `.sh` / shebang word is read and judged with the same rule. It is not executed. `echo $0` stays allowed.
+- A command substitution in a herestring is judged, including `cat <<< "$(rm -rf ~)"`. A quoted heredoc stays text.
+- Four recursive directories in a home or sensitive tree meet the flat bulk threshold. Three do not. `/tmp` does not use the home weight. One directory still uses the tree walk.
+
+### Round 13
+
+Retest of `34f1c13`. The classes below are judged from the command text, or from a real bash path with a recorder stub. Tests do not run the dangerous commands.
+
+A hard block stays non-approvable for `/`, the home directory node, a trailing-slash symlink that follows to `/` or home, a raw disk, or a real fork bomb. A recursive delete of a system directory stays an approvable catch.
+
+- A command inside `(…)`, `{…}`, a background job, a coproc, `disown`, `nohup`, `setsid`, or an async list is judged the same way as the foreground command. `{ rm -rf /; } &` and `coproc NAME { rm -rf /; }` are hard blocks.
+- The agent shell should be a child subreaper. A disowned child is reparented to that shell when its subshell exits, so the shim still finds the sealed host. A shim with no sealed host in its ancestor chain judges and does not fall open. Silent mode is not the default for that child. A child outside a live approved tree is not covered.
+- `rm -rf -- ~/ws/*/` is an approvable catch, not a hard block. A glob whose directory contains a component exactly `data`, or a component that starts with `.` and is not `..`, is an approvable catch. `rm -rf /var/opt/gitlab/postgresql/data/*` and `rm -rf ~/.claude/skills/*` are catches. `~/ws/scratch/*.png` and `~/ws/var/www/*` stay allowed. `~/*` and `/usr/*` stay catches. `/*` stays a hard block. `/tmp/job/*` stays allowed. An explicit `rm -rf rootlink/` with no glob stays a hard block.
+- A script written and then run on the same line is judged from the text when the bytes are visible. `printf 'rm -rf ~\n' > /tmp/x.sh; bash /tmp/x.sh` and `cat > f <<EOF` of a delete followed by `sh f` are catches. The file is not executed. A write with no later shell, `printf 'echo hi\n' > /tmp/x.sh; bash /tmp/x.sh`, and a heredoc that is only data stay allowed.
+- `svn ls` and `svn list` piped into `xargs rm` are a catch, the same shape as `git` and `hg`. `svn ls | head -5 | xargs rm -f` stays allowed.
+- A bare `SPOTTER_SH_COVERED=` or `SHELLSPOTTER_COVERED=` prefix, and `declare -x`, `typeset -x`, or `sudo -E env` assigning a state-directory or cover name, are an approvable catch. `echo SPOTTER_SH_COVERED=abc` is not an assignment. A cover prefix does not soften `rm -rf /`.
+
+### Round 14
+
+Retest of `5fe08e9`. The classes below are judged from the command text, or from the argv a shim would see. Tests do not run the commands.
+
+A hard block stays non-approvable for `/`, the home directory node, a trailing-slash symlink that follows to `/` or home, a raw disk, or a real fork bomb. A recursive delete of a system directory stays an approvable catch.
+
+- A backgrounded pipeline whose stages are the same shell builtin or no-op is a fork bomb. `:|:&`, `(:|:&)&`, `true|true&`, `builtin : | builtin : &`, and the same shape inside an invoked function or `bash -c` are hard blocks. `:|:` without `&`, `true|false&`, `echo hi | cat &`, `ls | head &`, and an uncalled `f(){ :|:& }` stay allowed.
+- A launcher is unwrapped and its payload is judged. That includes `at` and `batch` (a here-string, a here-document, a pipe, or `-f`), `systemd-run`, `script -c`, `flock`, `watch`, `nsenter`, `unshare`, `chroot`, `su -c`, `runuser -c`, `crontab -`, `tmux new` / `screen -dm`, `ssh-agent`, `dbus-launch`, `stdbuf`, `ionice`, `chrt`, `taskset`, and `cpulimit`. `at now + 1 hour <<< 'echo hi'`, `systemd-run --user sleep 1`, `watch ls`, and `script -c 'ls'` stay allowed. `crontab -l` and `at -l` stay allowed. A scheduler with no readable payload (`at now`, `crontab -`, `systemd-run --user`, `at -f` of a file this command did not write) is an approvable catch.
+- A backgrounded delete is judged in the text check. `{ rm -rf /var; } &`, `timeout --foreground 5 rm -rf / &`, `timeout -k 1 5 rm -rf /`, `( sleep 3 && rm -rf /lib ) & disown`, and `setsid bash -c 'rm -rf /'` are caught. `timeout 5 echo hi &` and `setsid bash -c 'echo hi'` stay allowed.
+
+### Round 15
+
+Retest of `d11f60d`. The classes below are judged from the command text, or from the argv a shim would see. Tests do not run the commands. `TestRound5QuotedBombAndShellCwd` runs the host shell against a recorder and must stay unskipped.
+
+A hard block stays non-approvable for `/`, the home directory node, a trailing-slash symlink that follows to `/` or home, a raw disk, a real fork bomb, or a recursive delete of every existing top-level directory. A recursive delete of one system directory stays an approvable catch.
+
+- `rm -rf /bin /etc /usr /home /var /lib /sbin /opt /root /boot` is a hard block on the text check, on `hook.PrecheckAt` (the host path), on the engine, and on `shim.Check`. `rm -rf /bin` and `rm -rf /etc /usr` stay approvable catches. The same corpus is asserted across those layers so a tier cannot drift again.
+- `{ :|:& }` is a fork bomb. A brace group runs immediately, so it does not need a later call. `f(){ :|:& }` with no call stays allowed.
+- `runuser -u root -- rm -rf /` is a hard block. `su`, `runuser`, `nsenter`, `chroot`, `systemd-run`, `sudo -u`, `doas`, `pkexec`, and `machinectl shell` are judged by the command they run. With no readable command, that is an approvable catch. `at --help`, `systemd-run --user --help`, and `--version` stay allowed.
+
 ## 3. Not yet tested
 
-Independent review has not been run on any of the following. Builder-side tests are not a substitute.
+Independent review has not been run on round 15. Builder-side tests are not a substitute. Rounds 7 through 14 were retested only as far as the notes above; round 15 has had no independent pass.
 
-- Round 7, head `e336d1a`. It was never independently retested. That includes the disguised root and home wipes (expanded `/*`, command substitution, a variable that expands to `/`, and the top-level directory set), the bomb variants that are actually invoked, a `cd` inside a brace group that still applies to the next redirect, and `cp -t` / `install -t` of a new file into a system library directory.
-- The addendum at `3a17695` (an invoked bomb, `python3` `rmtree` of `/`, and `rm -rf` of a symlink to `/` as non-approvable hard blocks). It landed after the round-6 independent retest and has no independent retest of its own.
-- Silent mode, the JSON Lines log, rotation, and `spotter-sh report`. No independent bot has run them.
-- A live session on the agent using real agent-style commands.
+- Round 15 of the spotter-sh module. The next held-out set should use fresh commands from the classes in the round-15 note, not the examples already in the builder tests.
+- Silent mode, the JSON Lines log, rotation, and `spotter-sh report`. No independent bot has run them. The display name is Shell Spotter.
+- A live session on a real agent host, using ordinary commands from that host.
 - `install --system` on a real host.
 - Long-running behavior and performance at scale. The timing numbers so far are short bash-and-shim samples (p50 and p99 against a baseline), not a soak.
 - `iptables` drop-all. This is a spec gap: the case is not specified tightly enough to score, and it has not been run.
@@ -97,5 +189,5 @@ Independent review has not been run on any of the following. Builder-side tests 
 3. Score each set: false positives, hard blocks, false negatives, broken.
 4. Approve through every false positive as a trusted admin, on the session that caught it.
 5. Take p50 and p99 against an unshimmed baseline.
-6. Include the round-7 head `e336d1a`, the `3a17695` addendum, and silent mode (log, rotation, report, and the sealed `silent` / `enforce` switch).
+6. Include silent mode (log, rotation, report, and the sealed `silent` / `enforce` switch) and the round-14 behavior. Approve one catch and confirm the same command does not open a second catch. Confirm a disowned background delete is caught the same way as the foreground delete.
 7. Add a regression test for each item that fails, on the bash and shim path, and re-run the sets after the fix.

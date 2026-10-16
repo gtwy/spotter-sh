@@ -1,0 +1,20 @@
+{
+  "schema_version": "1.0",
+  "title": "Shell Spotter catch",
+  "type": "object",
+  "required": ["schema_version", "catch_id", "level", "command", "argv", "cwd", "restricted", "report", "affected"],
+  "properties": {
+    "schema_version": {"const": "1.0"},
+    "catch_id": {"type": "string"},
+    "level": {"enum": ["danger", "bulk", "hardblock"]},
+    "command": {"type": "string"},
+    "argv": {"type": "array", "items": {"type": "string"}},
+    "cwd": {"type": "string"},
+    "restricted": {"type": "boolean"},
+    "report": {"type": "string"},
+    "affected": {"type": "object"},
+    "consequence": {"type": "string"},
+    "common_mistake": {"type": "string"},
+    "safer_rewrite": {"type": "string"}
+  }
+}
